@@ -95,6 +95,7 @@ DenseNet, ResNet, VGG
 Notes for Adir
 ---
 
+A main distinction between text detection and general object detection is that, text are homogeneous as a whole and show locality, while general object detection are not. Thus, any part of a text instance is still text. Human do not have to see the whole text instance to know it belongs to some text.
 
 Classify existing methods - 
 1. text detection that detects and localizes the existance of text in natural image.
@@ -125,7 +126,19 @@ Also - R-CNN (region convolutional neural network - for object detection) - **ot
 
 R2CNN - while most previous text detection methods are designed for detecting horizontal or near - horizonal texts, some methods try to address the arbitrary-oriented text detection problem. 
 
+2. **Decomposing into Sub-Text**
 
+methods that only predict sub-text components, and then assemble them into a text instance, follows the standard routine of general object detection. We'll have a network which produces initial guess of the localization of possible next instance. optionally, some methods then use a refinement part to filter false positive and also correct the localization.
+
+sub-texts level detection methods only predicts parts that are combined to make a text instance. Such sub-text mainly includes pixel-level and components-level.
+On pixel-level methods, an end-to-end fully convolutional neural network learns to generate a dense prediction map, indicating whether each pixel in the original image belongs to any text instances or not. Post-processing methods, then groups pixels together (depending on which pixels belong to the same text instance). **the core oo pixel-level methods is to separate text instances from each other**
+
+**pixellink** - learns to predict whether two adjacent pixels belong to the same text instance by adding link prediction to each pixel. - https://arxiv.org/pdf/1801.01315.pdf
+It extracts text locations directly from an instance segmentation result, instead of from bounding box regression. In PixelLink, a Deep Neural Network (DNN) is trained to do two kinds of pixelwise predictions, text/non-text prediction, and link prediction. Pixels within text instances are labeled as positive (i.e., text pixels), and otherwise are labeled as negative (i.e., nontext pixels). Every pixel has 8 neighbors. For a given pixel and one of its neighbors, if they lie within the same instance, the link between them is labeled as positive, and otherwise negative.
+Predicted positive pixels are joined together into Connected Components (CC) by predicted positive links
+
+Generally speaking, sub-text level methods are more robust to the size, aspect ratio, and shape of different text instances. However, the efficiency of the postprocessing step
+may depend on the actual implementation, and is slow in some cases. The lack of refinement step may also harm the performance.
 
 ---
 **Recognition**
