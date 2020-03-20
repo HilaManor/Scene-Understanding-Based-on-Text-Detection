@@ -26,7 +26,7 @@ instances. However, efficiency of the postprocessing step is slow in some cases
   - pixel-level: is each pixel belongs to text? then post-processing to group them smartly (PixelLink)
   - components-lvel: text segments such as one or more characters(SegLink, Corner localization-> *multi-oriented text*)
 ##### Specific Targets
-long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregular shpaes(TextSnake), speed (EAST), instance segmentation, Retrieving Designated Text (DTLN - text regions, CRTR), Copmlex Background(AIF)
+long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregular shpaes(TextSnake - the only one that was tested against multiple DBs), speed (EAST), instance segmentation, Retrieving Designated Text (DTLN - text regions, CRTR), Copmlex Background(AIF)
 
 #### Recognition
 Input: cropped text instance images: contain **one word** or **one line**
@@ -59,17 +59,35 @@ SEE - transform and crop before being fed into recognition branch
 
 ### BENCHMARK DATASETS AND EVALUATION PROTOCOLS
 Detection & Recognition
-- The Street View Text (SVT)
+- The Street View Text (SVT) - Horizontal, not signs
 - ICDAR 2013 - large and horizontal text - Detection Stats
+  - Word spotting vs End-to-End evaluation
 - ICDAR 2015 - google glasses, blur, small - Detection Stats
-- _MSRA-TD500 (2012)_
+  - Word spotting vs End-to-End evaluation
+
+Detection
+- _MSRA-TD500 (2012)_ - Multi-Oriented, long - Detection Stats
+  - HUST-TR400 - more training data for this dataset
+ 
+Recognition
+- IIIT 5K-Word(2012) - font, color, size and other noises, Horizontal
+- SVT-Perspective (SVTP) - Google Street View, warped, not signs
+- End-to-End Interpretation of the French Street Name Signs Dataset(https://arxiv.org/abs/1702.03970)
+
+#### Evaluation
+- precision - the proportion of predicted text instances that can be matched to ground truth labels
+- Recall - the proportion of ground truth labels that have correspondents in the predicted list
+- F1-score - 2*P*R/(P+R)
+
+Detection - DetEval, PASCAL, + modifications
+Recognition+End-to-End - character-level recognition rate, word level, 
 
 
 
 מה אפשר, איך, ומה אי אפשר היום
 
 Base Nets:
-DenseNet, ResNet
+DenseNet, ResNet, VGG
 
 
 ---
