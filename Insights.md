@@ -26,7 +26,7 @@ instances. However, efficiency of the postprocessing step is slow in some cases
   - pixel-level: is each pixel belongs to text? then post-processing to group them smartly (PixelLink)
   - components-lvel: text segments such as one or more characters(SegLink, Corner localization-> *multi-oriented text*)
 ##### Specific Targets
-long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregular shpaes(TextSnake), speed (EAST), instance segmentation(
+long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregular shpaes(TextSnake), speed (EAST), instance segmentation, Retrieving Designated Text (DTLN - text regions, CRTR), Copmlex Background(AIF)
 
 
 מה אפשר, איך, ומה אי אפשר היום
