@@ -62,7 +62,7 @@ There are 3 main trends in the field of text detection
 most recent methods have largely simplified and much shorter pipelines, which is a key to reduce error propagation and simplify the training process. The main components of these methods are end-to-end  modules (end-to-end trainable neural-network model + post-processing step that is usually much simpler than previous ones). **EAST**
 EAST nakes a difference to the field of text detection with ita highly simplified pipeline and the effciency. Most famous for its speed. 
 
-https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/ - open CV ((Open Source Computer Vision Library)) +++ "In this tutorial you will learn how to use OpenCV to detect text in natural scene images using the EAST text detector".
+[open CV +++ "In this tutorial you will learn how to use OpenCV to detect text in natural scene images using the EAST text detector"](https://www.pyimagesearch.com/2018/08/20/opencv-text-detection-east-text-detector/)
 
 Also - R-CNN (region convolutional neural network - for object detection) - **other method** where the second stage corrects the localization results. Rotaion Region Proposal Networks generates rotating region proposals, in orderto fit into text of arbitary orientations, instead of axis-aligned rectangles. - R2CNN, FEN
 
