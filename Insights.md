@@ -33,7 +33,10 @@ long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregul
 Base Nets:
 DenseNet, ResNet
 
-----------------------------------------Notes For Adir------------------------------------
+
+Notes for Adir
+---
+
 
 Classify existing methods - 
 1. text detection that detects and localizes the existance of text in natural image.
