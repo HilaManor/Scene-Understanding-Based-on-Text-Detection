@@ -88,7 +88,7 @@ Classify existing methods -
 
 The detection of scene text has a different set of characteristics and challenges that require unique methologies and solutions. 
 
-**In the setection process - also consists of several steps**-
+**In the detection process - also consists of several steps**-
 1. Text blocks are extracted. 
 2. The model crops and only focuses on the extracted text blocks, to extract text center line (TCL) - defined as a shrunk version of the original text line. 
 Each text line represents the existance of one text instance.
@@ -108,6 +108,50 @@ Also - R-CNN (region convolutional neural network - for object detection) - **ot
 R2CNN - while most previous text detection methods are designed for detecting horizontal or near - horizonal texts, some methods try to address the arbitrary-oriented text detection problem. 
 
 
+
+---
+**Recognition**
+--- 
+
+input of these methods are cropped text instance images - contain 1 word or 1 text line.
+
+**traditional text recognition methods*** - the task is devided into 3 steps - image pre-processing, character segmentation and character recognition. 
+
+---
+
+**CNN VS RNN**
+
+**CNN** is a feed forward neural network that is generally used for Image recognition and object classification. While **RNN** works on the principle of saving the output of a layer and feeding this back to the input in order to predict the output of the layer.
+
+CNN considers only the current input while RNN considers the current input and also the previously received inputs. It can memorize previous inputs due to its internal memory.
+
+CNN has 4 layers namely: Convolution layer, ReLU layer, Pooling and Fully Connected Layer. Every layer has its own functionality and performs feature extractions and finds out hidden patterns.
+
+There are 4 types of RNN namely: One to One, One to Many, Many to One and Many to Many.
+
+RNN can handle sequential data while CNN cannot.
+
+---
+
+**CRNN\CTC-Based Method** - a model that stacks CNN with RNN to recognise scene text images. CRNN consists of three parts -
+1. convolutional layers - which extract a feature sequence from the input image
+2. Recurrent layers - predict a label distribution for each frame
+3. CTC layer (transcription) - translates the per-frame predictions into the final label sequence
+
+note - despite the progress we have seen so far, the evaluation of recognition methods falls behind the time. As most *detection* methods can detect oriented and irregular text and some even rectify them (ליישר, לסדר), the recognition of such text may seem redundant.
+
+---
+---
+
+**End-to-End system**
+
+In the past, text detection and recognition are usually cast as two independent sub-problems that are combined together to perform text reading from images. Recently, many end-to-end text detection and recognition systems (==text spotting systems) have been proposed.
+
+While earlier work first detect single characters in the input image, recent systems usually detect and recognise text in word level or line level. Some of these systems first generate text proposals using a text detection model and then recognise them with another text recognition model. 
+
+
+**An end-to-end scene text detection demo based on EAST and CRNN.**
+ https://github.com/ppanopticon/east-crnn
 
 
 
