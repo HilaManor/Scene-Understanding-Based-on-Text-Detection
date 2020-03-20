@@ -28,10 +28,49 @@ instances. However, efficiency of the postprocessing step is slow in some cases
 ##### Specific Targets
 long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregular shpaes(TextSnake), speed (EAST), instance segmentation, Retrieving Designated Text (DTLN - text regions, CRTR), Copmlex Background(AIF)
 
+#### Recognition
+Input: cropped text instance images: contain **one word** or **one line**
+traditional steps:
+1. image pre-processing - resize the cropped image to a fixed height
+2. _character segmentation_ - hardest, trying to avoid by _Connectionist Temporal Classification_ or _Attention mechanism_
+3. character recognition
+
+##### CTC-based Methods
+CRNN
+2. 
+  - convolutional layers - extract features
+  - RNN: produce a character prediction for each column (label distribution for each frame)
+3. transcription layer (CTC layer) - final labels (from predictions)
+
+FCN
+2. convolutional layers
+3. transcription layer (CTC layer) - final labels (from predictions)
+
+##### Attention-based methods
+- recurrent neural networks with implicitly learned characterlevel language statistics
+EP - trys to estimate the probability while considering the possible occurrences of missing or superfluous characters
+
+#### End-to-End
+SEE - transform and crop before being fed into recognition branch
+
+#### Aux
+- syntetic Data: Model trained only on SynthText achieves state-of-the-art on many text detection datasets
+- deblurring
+
+### BENCHMARK DATASETS AND EVALUATION PROTOCOLS
+Detection & Recognition
+- The Street View Text (SVT)
+- ICDAR 2013 - large and horizontal text - Detection Stats
+- ICDAR 2015 - google glasses, blur, small - Detection Stats
+- _MSRA-TD500 (2012)_
+
+
 
 מה אפשר, איך, ומה אי אפשר היום
+
 Base Nets:
 DenseNet, ResNet
+
 
 ---
 ---
