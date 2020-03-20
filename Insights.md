@@ -33,7 +33,7 @@ long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregul
 Base Nets:
 DenseNet, ResNet
 
-
+---
 Notes for Adir
 ---
 
