@@ -1,9 +1,10 @@
-# רשמים
+* [קישורים מאוזכרים במאמר 1](https://github.com/Jyouhou/SceneTextPapers)
 
-## Scene Text Detecion and Recognition: The Deep Learning Era
-* [קישורים מאוזכרים במאמר](https://github.com/Jyouhou/SceneTextPapers)
+OCR:
+1. pre-processing - Remove the noise, complex background, Handle the different lightning conditions
+2. Detecion - create and bounding box around the text
+3. Recognition
 
-Spotting text is composed of 2 steps: **Detection** and then **Recognition**
 
 ### Difficulties
 * Diversity and Variability of Text in Natural Scenes - כבר מצמצמים לשלטים?
@@ -12,9 +13,17 @@ Spotting text is composed of 2 steps: **Detection** and then **Recognition**
 
 ### Methodologies
 #### Detection
+- Sliding window technique -  sliding window passes through the image to detect the text in that window
+  - try with different window size
+  - computationally expensive
+  - convolutional implementation exists that can reduce the computational time
+- single-shot techniques
+  - YOLO
+- region-based - the network proposes text region, then classify for text or not
+ 
 ##### Pipeline Simplification
 2-step pipeline
-anchor based default box prediction (EAST)
+anchor based default box prediction (EAST - horizontal and rotated bounding boxes)
 second stage corrects localization results based on features obtained by ROI pooling (R-CNN, R2CNN - different sizes)
 
 ##### Decomposing into Sub-Text
@@ -37,12 +46,16 @@ traditional steps:
 
 ##### CTC-based Methods
 CRNN
+1. pre-processing
 2. 
   - convolutional layers - extract features
   - RNN: produce a character prediction for each column (label distribution for each frame)
 3. transcription layer (CTC layer) - final labels (from predictions)
+  - lexicon-free
+  - lexicon-based - the highest probable label sequence will be predicted
 
 FCN
+1. pre-processing
 2. convolutional layers
 3. transcription layer (CTC layer) - final labels (from predictions)
 
@@ -73,6 +86,7 @@ Recognition
 - IIIT 5K-Word(2012) - font, color, size and other noises, Horizontal
 - SVT-Perspective (SVTP) - Google Street View, warped, not signs
 - End-to-End Interpretation of the French Street Name Signs Dataset(https://arxiv.org/abs/1702.03970)
+- The Street View House Numbers (SVHN)
 
 #### Evaluation
 - precision - the proportion of predicted text instances that can be matched to ground truth labels
@@ -89,6 +103,14 @@ Recognition+End-to-End - character-level recognition rate, word level,
 Base Nets:
 DenseNet, ResNet, VGG
 
+
+## Deep Learning Based OCR for Text in the Wild
+
+- Scene Text dataset - korean + english
+- Tesseract 4 for recognition - works well with straight angles
+
+
+[ ] maybe when analyzing the sign we can get the homography (we know that it's parallel) and so we can straighten the text
 
 ---
 ---
