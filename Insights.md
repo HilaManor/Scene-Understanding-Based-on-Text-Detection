@@ -1,17 +1,16 @@
 * [קישורים מאוזכרים במאמר 1](https://github.com/Jyouhou/SceneTextPapers)
 
-OCR:
-1. pre-processing - Remove the noise, complex background, Handle the different lightning conditions
-2. Detecion - create and bounding box around the text
-3. Recognition
-
-
 ### Difficulties
 * Diversity and Variability of Text in Natural Scenes - כבר מצמצמים לשלטים?
 * Complexity and Interference of Backgrounds - טיפול עצמי באמצעות מיקוד בשלטים
 * Imperfect Imaging Conditions
 
 ### Methodologies
+OCR:
+1. pre-processing - Remove the noise, complex background, Handle the different lightning conditions
+2. Detecion - create and bounding box around the text
+3. Recognition
+
 #### Detection
 - Sliding window technique -  sliding window passes through the image to detect the text in that window
   - try with different window size
@@ -34,6 +33,7 @@ every text is composed of more text. humans can see one letter and know that it 
 instances. However, efficiency of the postprocessing step is slow in some cases
   - pixel-level: is each pixel belongs to text? then post-processing to group them smartly (PixelLink)
   - components-lvel: text segments such as one or more characters(SegLink, Corner localization-> *multi-oriented text*)
+
 ##### Specific Targets
 long text, _Multi-Oriented Text_ (ITN - predicts affine transformation), irregular shpaes(TextSnake - the only one that was tested against multiple DBs), speed (EAST), instance segmentation, Retrieving Designated Text (DTLN - text regions, CRTR), Copmlex Background(AIF)
 
@@ -63,6 +63,9 @@ FCN
 - recurrent neural networks with implicitly learned characterlevel language statistics
 EP - trys to estimate the probability while considering the possible occurrences of missing or superfluous characters
 
+
+- Tesseract 4 for recognition - works well with straight angles
+
 #### End-to-End
 SEE - transform and crop before being fed into recognition branch
 
@@ -87,6 +90,7 @@ Recognition
 - SVT-Perspective (SVTP) - Google Street View, warped, not signs
 - End-to-End Interpretation of the French Street Name Signs Dataset(https://arxiv.org/abs/1702.03970)
 - The Street View House Numbers (SVHN)
+- Scene Text dataset - korean + english - from 2nd article
 
 #### Evaluation
 - precision - the proportion of predicted text instances that can be matched to ground truth labels
@@ -97,20 +101,10 @@ Detection - DetEval, PASCAL, + modifications
 Recognition+End-to-End - character-level recognition rate, word level, 
 
 
-
-מה אפשר, איך, ומה אי אפשר היום
-
 Base Nets:
 DenseNet, ResNet, VGG
 
-
-## Deep Learning Based OCR for Text in the Wild
-
-- Scene Text dataset - korean + english
-- Tesseract 4 for recognition - works well with straight angles
-
-
-[ ] maybe when analyzing the sign we can get the homography (we know that it's parallel) and so we can straighten the text
+- [ ] maybe when analyzing the sign we can get the homography (we know that it's parallel) and so we can straighten the text
 
 ---
 ---
