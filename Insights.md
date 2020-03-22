@@ -108,7 +108,7 @@ Base Nets: DenseNet, ResNet, VGG
 Notes for Adir
 ---
 
-**OPR Problem** - Optical Character Recognition. OCR is still a challenging problem especially when text images are taken in an unconstrained environment. For this project - **Unstructured Text**- Text at random places in a natural scene. Sparse text, no proper row structure, complex background , at random place in the image and no standard font.
+**OPR Problem - OCR is the ability of a machine to extract all information from an image into editable tex** - Optical Character Recognition. OCR is still a challenging problem especially when text images are taken in an unconstrained environment. For this project - **Unstructured Text**- Text at random places in a natural scene. Sparse text, no proper row structure, complex background , at random place in the image and no standard font.
 
 Text detection techniques required to detect the text in the image and create and bounding box around the portion of the image having text. Standard objection detection techniques will also work here.
 
