@@ -13,7 +13,7 @@
 
 ## MalongTech / research-charnet
 - doesn't have training code (only forward for testing)
-    - no baackwards functions
+  - no baackwards functions
 - config file with different params:
 ```_C.INPUT_SIZE = 2280
 _C.SIZE_DIVISIBILITY = 1
@@ -35,4 +35,9 @@ _C.NUM_CHAR_CLASSES = 68
 _C.WORD_DETECTOR_DILATION = 1
 _C.RESULTS_SEPARATOR = chr(31)
 ```
-- result: 4 bounding box coords, TEXT
+- `.\tools\test_net.py` returns txt: 4 bounding box coords, TEXT
+  - inside charnet function (class overloading) returns char_bboxes, char_scores, word_instances
+    - **word_instances**: array of WordInstance: char_scores, text, text_score, word bbox, word_bbox_score
+      - word bbox is the entire word polygon coords
+    - **char_bboxes**: 2d array of char coords in photo -> in single test we saw 78 chars bboxes but only 74 in the end word bboxes
+    - **char_scores**: 2d array: columns = num of chars
