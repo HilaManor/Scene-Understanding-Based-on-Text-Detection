@@ -41,3 +41,6 @@ _C.RESULTS_SEPARATOR = chr(31)
       - word bbox is the entire word polygon coords
     - **char_bboxes**: 2d array of char coords in photo -> in single test we saw 78 chars bboxes but only 74 in the end word bboxes
     - **char_scores**: 2d array: columns = num of chars
+- downloaded dataset from [https://rrc.cvc.uab.es/?ch=4]
+- 
+
