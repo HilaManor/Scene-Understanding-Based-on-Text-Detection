@@ -71,14 +71,21 @@ class OrientedTextPostProcessing(nn.Module):
             im_scale_w, im_scale_h,
             original_im_w, original_im_h
     ):
+        # Get word bounding boxes - from EAST/TextField ?
         ss_word_bboxes = self.parse_word_bboxes(
             pred_word_fg, pred_word_tblr, pred_word_orient,
             im_scale_w, im_scale_h, original_im_w, original_im_h
         )
+
+        # Get char bounding boxes
         char_bboxes, char_scores = self.parse_char(
             pred_word_fg, pred_char_fg, pred_char_tblr, pred_char_cls,
             im_scale_w, im_scale_h, original_im_w, original_im_h
         )
+
+        # The predicted instance level bounding boxes are applied to group the generated characters into text instances.
+        # by assigning a character to a text instance if the character bounding box have an overlap
+        # The final outputs are bounding boxes of text instances with the corresponding character labels.
         word_instances = self.parse_words(
             ss_word_bboxes, char_bboxes,
             char_scores, self.char_dict
@@ -256,17 +263,21 @@ class OrientedTextPostProcessing(nn.Module):
         num_char = char_bboxes.shape[0]
         word_instances = list()
         word_chars = [list() for _ in range(num_word)]
+
+        # for each letter checks if it overlaps a word's bounding box
         for idx in range(num_char):
             char_bbox = char_bboxes[idx]
             char_poly = char_polys[idx]
             match_scores = np.zeros((num_word,), dtype=np.float32)
+            # for each word check it's area
             for jdx in range(num_word):
                 word_bbox = word_bboxes[jdx]
                 word_poly = word_polys[jdx]
                 match_scores[jdx] = match(word_bbox, word_poly, char_bbox, char_poly)
             jdx = np.argmax(match_scores)
-            if match_scores[jdx] > 0:
+            if match_scores[jdx] > 0:  # adds the chars to the correct word array
                 word_chars[jdx].append(idx)
+        # for every word, create its text instance
         for idx in range(num_word):
             char_indices = word_chars[idx]
             if len(char_indices) > 0:
