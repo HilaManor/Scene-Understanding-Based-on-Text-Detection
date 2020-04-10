@@ -59,7 +59,7 @@ _C.RESULTS_SEPARATOR = chr(31)
   - → This means the word splitting is done by the East/TextField (Need Training code)
   - don't know about the קישוטים problem
 
-# PROBLEM(https://www.google.com/permissions/geoguidelines/)
+# [PROBLEM](https://www.google.com/permissions/geoguidelines/)
 - street view downloader 360
   - https://istreetview.com/
   
