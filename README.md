@@ -48,6 +48,18 @@ _C.RESULTS_SEPARATOR = chr(31)
     - =>0.98 V
     - => 0.8 - checks dict
   - else => 0.9 V
-  
-    
 
+---
+- Sent mail to malong github + 2nd author. 
+  - 2nd author replied, they asked the team manager to publish the code. said that we can contact him if need
+### General algorithm system 
+- Runs through EAST/TextField (modified) in order to get word bboxes 
+- Runs their own characters network (in parallel, unrelated) 
+- then it compares word bboxes and characters bboxes, saving every character that overlaps into the word string
+  - → This means the word splitting is done by the East/TextField (Need Training code)
+  - don't know about the קישוטים problem
+
+# PROBLEM(https://www.google.com/permissions/geoguidelines/)
+- street view downloader 360
+  - https://istreetview.com/
+  
