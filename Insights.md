@@ -1,9 +1,4 @@
-# רשמים
-
-## Scene Text Detecion and Recognition: The Deep Learning Era
-* [קישורים מאוזכרים במאמר](https://github.com/Jyouhou/SceneTextPapers)
-
-Spotting text is composed of 2 steps: **Detection** and then **Recognition**
+* [קישורים מאוזכרים במאמר 1](https://github.com/Jyouhou/SceneTextPapers)
 
 ### Difficulties
 * Diversity and Variability of Text in Natural Scenes - כבר מצמצמים לשלטים?
@@ -11,10 +6,23 @@ Spotting text is composed of 2 steps: **Detection** and then **Recognition**
 * Imperfect Imaging Conditions
 
 ### Methodologies
+OCR:
+1. pre-processing - Remove the noise, complex background, Handle the different lightning conditions
+2. Detecion - create and bounding box around the text
+3. Recognition
+
 #### Detection
+- Sliding window technique -  sliding window passes through the image to detect the text in that window
+  - try with different window size
+  - computationally expensive
+  - convolutional implementation exists that can reduce the computational time
+- single-shot techniques
+  - YOLO
+- region-based - the network proposes text region, then classify for text or not
+ 
 ##### Pipeline Simplification
 2-step pipeline
-anchor based default box prediction (EAST)
+anchor based default box prediction (EAST - horizontal and rotated bounding boxes)
 second stage corrects localization results based on features obtained by ROI pooling (R-CNN, R2CNN - different sizes)
 
 ##### Decomposing into Sub-Text
@@ -37,18 +45,26 @@ traditional steps:
 
 ##### CTC-based Methods
 CRNN
+1. pre-processing
 2. 
   - convolutional layers - extract features
   - RNN: produce a character prediction for each column (label distribution for each frame)
 3. transcription layer (CTC layer) - final labels (from predictions)
+  - lexicon-free
+  - lexicon-based - the highest probable label sequence will be predicted
 
 FCN
+1. pre-processing
 2. convolutional layers
 3. transcription layer (CTC layer) - final labels (from predictions)
 
 ##### Attention-based methods
 - recurrent neural networks with implicitly learned characterlevel language statistics
 EP - trys to estimate the probability while considering the possible occurrences of missing or superfluous characters
+
+
+
+- Tesseract 4 for recognition - works well with straight angles
 
 #### End-to-End
 SEE - transform and crop before being fed into recognition branch
@@ -73,6 +89,8 @@ Recognition
 - IIIT 5K-Word(2012) - font, color, size and other noises, Horizontal
 - SVT-Perspective (SVTP) - Google Street View, warped, not signs
 - End-to-End Interpretation of the French Street Name Signs Dataset(https://arxiv.org/abs/1702.03970)
+- The Street View House Numbers (SVHN)
+- Scene Text dataset - korean + english - from 2nd article
 
 #### Evaluation
 - precision - the proportion of predicted text instances that can be matched to ground truth labels
@@ -83,18 +101,22 @@ Detection - DetEval, PASCAL, + modifications
 Recognition+End-to-End - character-level recognition rate, word level, 
 
 
+Base Nets: DenseNet, ResNet, VGG
 
-מה אפשר, איך, ומה אי אפשר היום
-
-Base Nets:
-DenseNet, ResNet, VGG
-
-
----
+- [ ] maybe when analyzing the sign we can get the homography (we know that it's parallel) and so we can straighten the text
 ---
 Notes for Adir
 ---
 
+**OPR Problem - OCR is the ability of a machine to extract all information from an image into editable tex** - Optical Character Recognition. OCR is still a challenging problem especially when text images are taken in an unconstrained environment. For this project - **Unstructured Text**- Text at random places in a natural scene. Sparse text, no proper row structure, complex background , at random place in the image and no standard font.
+
+Text detection techniques required to detect the text in the image and create and bounding box around the portion of the image having text. Standard objection detection techniques will also work here.
+
+**Sliding window technique** - The bounding box can be created around the text through the sliding window technique. However, this is a computationally expensive task. In this technique, a sliding window passes through the image to detect the text in that window, like a convolutional neural network. We try with different window size to not miss the text portion with different size. **There is a convolutional implementation of the sliding window which can reduce the computational time.**
+
+**Single Shot (YOLO) and Region based detectors**
+
+A main distinction between text detection and general object detection is that, text are homogeneous as a whole and show locality, while general object detection are not. Thus, any part of a text instance is still text. Human do not have to see the whole text instance to know it belongs to some text.
 
 Classify existing methods - 
 1. text detection that detects and localizes the existance of text in natural image.
@@ -125,7 +147,19 @@ Also - R-CNN (region convolutional neural network - for object detection) - **ot
 
 R2CNN - while most previous text detection methods are designed for detecting horizontal or near - horizonal texts, some methods try to address the arbitrary-oriented text detection problem. 
 
+2. **Decomposing into Sub-Text**
 
+methods that only predict sub-text components, and then assemble them into a text instance, follows the standard routine of general object detection. We'll have a network which produces initial guess of the localization of possible next instance. optionally, some methods then use a refinement part to filter false positive and also correct the localization.
+
+sub-texts level detection methods only predicts parts that are combined to make a text instance. Such sub-text mainly includes pixel-level and components-level.
+On pixel-level methods, an end-to-end fully convolutional neural network learns to generate a dense prediction map, indicating whether each pixel in the original image belongs to any text instances or not. Post-processing methods, then groups pixels together (depending on which pixels belong to the same text instance). **the core oo pixel-level methods is to separate text instances from each other**
+
+**pixellink** - learns to predict whether two adjacent pixels belong to the same text instance by adding link prediction to each pixel. - https://arxiv.org/pdf/1801.01315.pdf
+It extracts text locations directly from an instance segmentation result, instead of from bounding box regression. In PixelLink, a Deep Neural Network (DNN) is trained to do two kinds of pixelwise predictions, text/non-text prediction, and link prediction. Pixels within text instances are labeled as positive (i.e., text pixels), and otherwise are labeled as negative (i.e., nontext pixels). Every pixel has 8 neighbors. For a given pixel and one of its neighbors, if they lie within the same instance, the link between them is labeled as positive, and otherwise negative.
+Predicted positive pixels are joined together into Connected Components (CC) by predicted positive links
+
+Generally speaking, sub-text level methods are more robust to the size, aspect ratio, and shape of different text instances. However, the efficiency of the postprocessing step
+may depend on the actual implementation, and is slow in some cases. The lack of refinement step may also harm the performance.
 
 ---
 **Recognition**
