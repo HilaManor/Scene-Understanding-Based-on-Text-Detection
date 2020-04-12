@@ -48,6 +48,9 @@ _C.RESULTS_SEPARATOR = chr(31)
     - =>0.98 V
     - => 0.8 - checks dict
   - else => 0.9 V
+  
+  
+ 
 
 ---
 - Sent mail to malong github + 2nd author. 
@@ -62,4 +65,33 @@ _C.RESULTS_SEPARATOR = chr(31)
 # [PROBLEM](https://www.google.com/permissions/geoguidelines/)
 - street view downloader 360
   - https://istreetview.com/
+  
+
+ Issues -
+  1. Dictionary - check with Elad if changes are needed
+     - 'AAA'
+     when final word score is 80%-98%, using the dict for word recog - creating false words.
+     -  KERE - maybe change the score parameter / when to use dict
+        **Even when only 1 word had decreased the score (k)**
+     -  when finding only a part of a word - using dict (false word) 
+        (*B*LOND - LOND)
+     
+  2. Less than 3 characters - (st)   
+  
+  3. corners 
+     - creating false words
+     - 
+     
+  4. Size Of Pic - 
+     - Panorama    
+     
+  5. Colors Changes -
+     - when a word is written with more than 1 color (Loss of 'H' - half black half white - New Zealand)  
+     - background (Barny Martin - Australia)  
+       
+  6. HyperParameters (?) -
+     - char_min_score & Word_min_score
+     - input size - Require strong GPU (recognize more in panorama pic)
+     
+  A. Various pics from different angles of the same word provides diffrent recognition (if the word was cut / in the corner in one of them Vs presented as whole word in another pic)
   
