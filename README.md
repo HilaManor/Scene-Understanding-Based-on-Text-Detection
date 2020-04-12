@@ -76,7 +76,7 @@ _C.RESULTS_SEPARATOR = chr(31)
      -  when finding only a part of a word - using dict (false word) 
         (*B*LOND - LOND)
      
-  2. Less than 3 characters - (st)   
+  2. Less than 3 characters - (st)      
   
   3. corners 
      - creating false words
@@ -85,7 +85,7 @@ _C.RESULTS_SEPARATOR = chr(31)
   4. Size Of Pic - 
      - Panorama    
      
-  5. Colors Changes -
+  5. Colors Changes - 
      - when a word is written with more than 1 color (Loss of 'H' - half black half white - New Zealand)  
      - background (Barny Martin - Australia)  
        
@@ -93,5 +93,15 @@ _C.RESULTS_SEPARATOR = chr(31)
      - char_min_score & Word_min_score
      - input size - Require strong GPU (recognize more in panorama pic)
      
-  A. Various pics from different angles of the same word provides diffrent recognition (if the word was cut / in the corner in one of them Vs presented as whole word in another pic)
+  A. Various pics from different angles of the same word provides different recognition (if the word was cut / in the corner in one of them Vs presented as whole word in another pic)
   
+  2. - new dict for <3 characters - street words (Boulevard, street, etc), conjuctions (and, or, to)
+     - different kinds of dict? - ex: recognize it's a street sign, using relevant dict (3RD AV)
+  
+  1. Dict -> evaluate by distance with weights -> for ex- 3/4 chars are 100%, do not change them in the final word
+  
+  3. - Transformation - If a word in a corner -> calculate the transformation between 2 frames: to check if in the new image the word is different 
+     - If a word is in the corner - smaller weights for later. 
+     
+  5. Ask about features, specifically ResNet50 + Hourglass - can we improve (?)   
+     
