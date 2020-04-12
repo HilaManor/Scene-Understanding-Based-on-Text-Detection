@@ -53,7 +53,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Test")
 
     parser.add_argument("config_file", help="path to config file", type=str)
-    parser.add_argument("image_dir", type=str)
+    parser.add_argument("scenes_dir", type=str)
     parser.add_argument("results_dir", type=str)
 
     args = parser.parse_args()
@@ -68,17 +68,24 @@ if __name__ == '__main__':
     charnet.eval()
     charnet.cuda()
 
-    for im_name in sorted(os.listdir(args.image_dir)):
-        print("Processing {}...".format(im_name))
-        im_file = os.path.join(args.image_dir, im_name)
-        im_original = cv2.imread(im_file)
-        im, scale_w, scale_h, original_w, original_h = resize(im_original, size=cfg.INPUT_SIZE)
-        with torch.no_grad():
-            char_bboxes, char_scores, word_instances = charnet(im, scale_w, scale_h, original_w, original_h)
-            im_with_poly = vis(im_original, word_instances)
-            im_name_base, im_ext = os.path.splitext(im_name)
-            cv2.imwrite(os.path.join(args.results_dir, im_name_base + "_processed" + im_ext), im_with_poly)
-            # save_word_recognition(
-            #     word_instances, os.path.splitext(im_name)[0],
-            #     args.results_dir, cfg.RESULTS_SEPARATOR
-            # )
+    os.makedirs(args.results_dir, exist_ok=True)
+
+    for scene in sorted(os.listdir(args.scenes_dir)):
+        curr_scene_path = os.path.join(args.scenes_dir, scene)
+        curr_output_dir = os.path.join(args.results_dir, scene)
+        os.makedirs(curr_output_dir, exist_ok=True)
+
+        for im_name in sorted(os.listdir(curr_scene_path)):
+            print("Processing {}: {}...".format(scene, im_name))
+            im_file = os.path.join(curr_scene_path, im_name)
+            im_original = cv2.imread(im_file)
+            im, scale_w, scale_h, original_w, original_h = resize(im_original, size=cfg.INPUT_SIZE)
+            with torch.no_grad():
+                char_bboxes, char_scores, word_instances = charnet(im, scale_w, scale_h, original_w, original_h)
+                im_with_poly = vis(im_original, word_instances)
+                im_name_base, im_ext = os.path.splitext(im_name)
+                cv2.imwrite(os.path.join(curr_output_dir, im_name_base + "_processed" + im_ext), im_with_poly)
+                save_word_recognition(
+                    word_instances, os.path.splitext(im_name)[0],
+                    curr_output_dir, cfg.RESULTS_SEPARATOR
+                )

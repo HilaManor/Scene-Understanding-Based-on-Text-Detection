@@ -247,8 +247,8 @@ class OrientedTextPostProcessing(nn.Module):
             word_vec = np.array([1, 0], dtype=np.float32)
             char_vecs = (char_bboxes.reshape((-1, 4, 2)) - word_bbox[0:2]).mean(axis=1)
             proj = char_vecs.dot(word_vec)
-            order = np.argsort(proj)
-            text, score = decode(char_scores[order])
+            order = np.argsort(proj)  # arrange the order of the letters
+            text, score = decode(char_scores[order])  # unfiltered text with its mean score
             return text, score, char_scores[order]
 
         word_bbox_scores = word_bboxes[:, 8]
