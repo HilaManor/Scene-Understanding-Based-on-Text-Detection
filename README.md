@@ -91,17 +91,28 @@ _C.RESULTS_SEPARATOR = chr(31)
        
   6. HyperParameters (?) -
      - char_min_score & Word_min_score
-     - input size - Require strong GPU (recognize more in panorama pic)
+     - input size - Require strong GPU (recognize more in panorama pic): computer lab? helpful?
      
   A. Various pics from different angles of the same word provides different recognition (if the word was cut / in the corner in one of them Vs presented as whole word in another pic)
   
-  2. - new dict for <3 characters - street words (Boulevard, street, etc), conjuctions (and, or, to)
+  2. - new dict for <3 characters - street words (Boulevard, street, etc), conjuctions (and, or, to) / let him work on >=2? how many false positives?
      - different kinds of dict? - ex: recognize it's a street sign, using relevant dict (3RD AV)
   
   1. Dict -> evaluate by distance with weights -> for ex- 3/4 chars are 100%, do not change them in the final word
   
   3. - Transformation - If a word in a corner -> calculate the transformation between 2 frames: to check if in the new image the word is different 
-     - If a word is in the corner - smaller weights for later. 
+     - If a word is in the corner - smaller weights for later.
+     - False words than cut in corners - do we want in to autocorrect beyond the boundrybox? 
      
   5. Ask about features, specifically ResNet50 + Hourglass - can we improve (?)   
      
+    
+   ---  
+     
+   Extraction of Structured Information from Street View Imagery -
+     - https://arxiv.org/pdf/1704.03549.pdf
+     - https://github.com/tensorflow/models/tree/master/research/attention_ocr
+     - dataset (google streetview)
+   
+   
+   check ground truth?
