@@ -51,7 +51,7 @@ class OrientedTextPostProcessing(nn.Module):
             word_nms_iou_thresh, char_stride,
             char_min_score, num_char_class,
             char_nms_iou_thresh, char_dict_file,
-            word_lexicon_path, shortword_lexicon_path
+            word_lexicon_path
     ):
         super(OrientedTextPostProcessing, self).__init__()
         self.word_min_score = word_min_score
@@ -63,7 +63,6 @@ class OrientedTextPostProcessing(nn.Module):
         self.char_nms_iou_thresh = char_nms_iou_thresh
         self.char_dict = load_char_dict(char_dict_file)
         self.lexicon = load_lexicon(word_lexicon_path)
-        self.lexicon_short = load_lexicon(shortword_lexicon_path)
 
     def forward(
             self, pred_word_fg, pred_word_tblr,
@@ -72,27 +71,20 @@ class OrientedTextPostProcessing(nn.Module):
             im_scale_w, im_scale_h,
             original_im_w, original_im_h
     ):
-        # Get word bounding boxes - from EAST/TextField ?
         ss_word_bboxes = self.parse_word_bboxes(
             pred_word_fg, pred_word_tblr, pred_word_orient,
             im_scale_w, im_scale_h, original_im_w, original_im_h
         )
-
-        # Get char bounding boxes
         char_bboxes, char_scores = self.parse_char(
             pred_word_fg, pred_char_fg, pred_char_tblr, pred_char_cls,
             im_scale_w, im_scale_h, original_im_w, original_im_h
         )
-
-        # The predicted instance level bounding boxes are applied to group the generated characters into text instances.
-        # by assigning a character to a text instance if the character bounding box have an overlap
-        # The final outputs are bounding boxes of text instances with the corresponding character labels.
         word_instances = self.parse_words(
             ss_word_bboxes, char_bboxes,
             char_scores, self.char_dict
         )
 
-        word_instances = self.filter_word_instances(word_instances, self.lexicon, self.lexicon_short)
+        word_instances = self.filter_word_instances(word_instances, self.lexicon)
 
         return char_bboxes, char_scores, word_instances
 
@@ -162,7 +154,7 @@ class OrientedTextPostProcessing(nn.Module):
         char_scores = char_scores[keep]
         return oriented_char_bboxes, char_scores
 
-    def filter_word_instances(self, word_instances, lexicon, short_lexicon):
+    def filter_word_instances(self, word_instances, lexicon):
         def match_lexicon(text, lexicon):
             min_dist, min_idx = 1e8, None
             for idx, voc in enumerate(lexicon):
@@ -175,15 +167,9 @@ class OrientedTextPostProcessing(nn.Module):
                         min_idx = idx
             return min_dist, lexicon[min_idx]
 
-        def filter_and_correct(word_ins, lexicon, short_lexicon):
+        def filter_and_correct(word_ins, lexicon):
             if len(word_ins.text) < 3:
-                if word_ins.text_score >= 0.80:
-                    # check dict for acceptable short-words, such as conjunctions and street abbreviations.
-                    dist, voc = match_lexicon(word_ins.text, short_lexicon)
-                    word_ins.text = voc
-                    word_ins.text_edst = dist
-                    if dist <= 1:
-                        return word_ins
+                return None
             elif word_ins.text.isalpha():
                 if word_ins.text_score >= 0.80:  
                     if word_ins.text_score >= 0.98:
@@ -194,14 +180,19 @@ class OrientedTextPostProcessing(nn.Module):
                         word_ins.text_edst = dist
                         if dist <= 1:
                             return word_ins
+                        else:
+                            return None
+                else:
+                    return None
             else:
                 if word_ins.text_score >= 0.90:
                     return word_ins
-            return None
+                else:
+                    return None
 
         valid_word_instances = list()
         for word_ins in word_instances:
-            word_ins = filter_and_correct(word_ins, lexicon, short_lexicon)
+            word_ins = filter_and_correct(word_ins, lexicon)
             if word_ins is not None:
                 valid_word_instances.append(word_ins)
         return valid_word_instances
@@ -249,8 +240,8 @@ class OrientedTextPostProcessing(nn.Module):
             word_vec = np.array([1, 0], dtype=np.float32)
             char_vecs = (char_bboxes.reshape((-1, 4, 2)) - word_bbox[0:2]).mean(axis=1)
             proj = char_vecs.dot(word_vec)
-            order = np.argsort(proj)  # arrange the order of the letters
-            text, score = decode(char_scores[order])  # unfiltered text with its mean score
+            order = np.argsort(proj)
+            text, score = decode(char_scores[order])
             return text, score, char_scores[order]
 
         word_bbox_scores = word_bboxes[:, 8]
@@ -265,21 +256,17 @@ class OrientedTextPostProcessing(nn.Module):
         num_char = char_bboxes.shape[0]
         word_instances = list()
         word_chars = [list() for _ in range(num_word)]
-
-        # for each letter checks if it overlaps a word's bounding box
         for idx in range(num_char):
             char_bbox = char_bboxes[idx]
             char_poly = char_polys[idx]
             match_scores = np.zeros((num_word,), dtype=np.float32)
-            # for each word check it's area
             for jdx in range(num_word):
                 word_bbox = word_bboxes[jdx]
                 word_poly = word_polys[jdx]
                 match_scores[jdx] = match(word_bbox, word_poly, char_bbox, char_poly)
             jdx = np.argmax(match_scores)
-            if match_scores[jdx] > 0:  # adds the chars to the correct word array
+            if match_scores[jdx] > 0:
                 word_chars[jdx].append(idx)
-        # for every word, create its text instance
         for idx in range(num_word):
             char_indices = word_chars[idx]
             if len(char_indices) > 0:
