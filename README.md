@@ -119,4 +119,4 @@ _C.RESULTS_SEPARATOR = chr(31)
    
    ---
    
-   - https://dl.acm.org/doi/pdf/10.1145/1027527.1027573
+   - [Context data in geo-referenced digital photo collections](https://dl.acm.org/doi/pdf/10.1145/1027527.1027573)
