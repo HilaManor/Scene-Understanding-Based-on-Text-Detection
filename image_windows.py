@@ -1,8 +1,6 @@
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#
-#
-#
-#
+# image_windows.py
+# Utility functions for getting images to run on from a panorama image
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Imports
@@ -10,6 +8,10 @@ import numpy as np
 
 
 class ImageWindows:
+    # """ Utility for sub-images of a given panorama.
+    #
+    #
+    # """
     def __init__(self, panorama, size_tpl=None, input_size_cfg=2280):
         self.panorama = panorama
         self.panorama_h = self.panorama.shape[0]
@@ -35,9 +37,22 @@ class ImageWindows:
                 x_end = x + self.__windows_size[0]
                 yield self.panorama[y:y_end, x:x_end]
 
-    def get_window_at_pos(self, around_pos_tpl):  # TODO around/left side?
+    def get_window_at_pos(self, around_pos_x, around_pos_y, margin=0):
+        """ Returns from the panorama a window starting from the given x,y, considering margins
 
-        pass
+        :param around_pos_x: starting window x (width) coordinate
+        :param around_pos_y: starting window y (height) coordinate
+        :param margin: margin from the position to go up-left (might be useful for giving this func
+                        directly the words coordinate, and pad so we won't miss it
+        :return: normal window sized image from the panorama
+        """
+        x_start = around_pos_x - margin
+        y_start = around_pos_y - margin
+        x_start = 0 if x_start < 0 else x_start
+        y_start = 0 if y_start < 0 else y_start
+        y_end = y_start + self.__windows_size[1]
+        x_end = x_start + self.__windows_size[0]
+        return self.panorama[y_start:y_end, x_start, x_end]
 
     def __calculate_window_size(self, upsacle_boundary=33):
         """ Calculates the window's size in pixels.

@@ -80,7 +80,7 @@ if __name__ == '__main__':
     text_net_group = parser.add_argument_group('Text Recognition Network',
                                                'arguments related to the text '
                                                'detection and recognition network')
-    text_net_group.add_argument("--config file", help="path to config file", type=str,
+    text_net_group.add_argument("--config_file", help="path to config file", type=str,
                                 default='.\\research-charnet-master\\configs'
                                         '\\icdar2015_hourglass88.yaml')
 
