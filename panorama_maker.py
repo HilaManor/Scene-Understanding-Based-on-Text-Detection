@@ -15,7 +15,7 @@ cv2.ocl.setUseOpenCL(False)
 
 # Constants
 
-class PanoramaMaker(Object):
+class PanoramaMaker:
     def __init__(self):
         self.__counter = 0 # todo do I need that counter? maybe for later use
         self.__photos = [] # empty list named photos
