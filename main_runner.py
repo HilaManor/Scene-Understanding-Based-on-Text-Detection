@@ -11,7 +11,10 @@ import os
 import cv2
 
 from panorama_maker import PanoramaMaker
-
+from image_windows import ImageWindows
+# from matplotlib import use
+# use("TkAgg")
+# from matplotlib import pyplot as plt
 
 def parse_dir(scene_path, output_path):
     """ Runs the context analysis on the given images of the scene in the given directory
@@ -24,15 +27,40 @@ def parse_dir(scene_path, output_path):
     for im_name in sorted(os.listdir(scene_path)):
         print("Working on \"%s\"..." % im_name)
         im_file = os.path.join(scene_path, im_name)
-        im_original = cv2.imread(im_file)
+        im_original = cv2.cvtColor(cv2.imread(im_file), cv2.COLOR_BGR2RGB)
 
-        panorama_gen.add_photo(im_original)
+        panorama_gen.add_photo(im_original)  # TODO ADIR
         # TODO - hmm?
         # im, scale_w, scale_h, original_w, original_h = resize(im_original,
         #                                                       size=cfg.INPUT_SIZE)
 
-    panorama = panorama_gen.create_panorama()
+
+    panorama = panorama_gen.create_panorama()  # TODO ADIR
     # TODO - success rate or something for panorama
+
+    # panorama = im_original
+    windows = ImageWindows(panorama)
+    # plt.figure()
+    # plt.imshow(panorama)
+    # plt.figure()
+    # for idx, window in enumerate(windows, 1):
+    #     plt.subplot(7, 7, idx)
+    #     plt.imshow(window)
+    # plt.show()
+
+    pass
+
+
+# def resize(im, size):
+#     h, w, _ = im.shape
+#     scale = max(h, w) / float(size)
+#     image_resize_height = int(round(h / scale / cfg.SIZE_DIVISIBILITY) * cfg.SIZE_DIVISIBILITY)
+#     image_resize_width = int(round(w / scale / cfg.SIZE_DIVISIBILITY) * cfg.SIZE_DIVISIBILITY)
+#     scale_h = float(h) / image_resize_height
+#     scale_w = float(w) / image_resize_width
+#     im = cv2.resize(im, (image_resize_width, image_resize_height),
+#                           interpolation=cv2.INTER_LINEAR)
+#     return im, scale_w, scale_h, w, h
 
 
 if __name__ == '__main__':
