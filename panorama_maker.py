@@ -11,111 +11,153 @@ import numpy as np
 import matplotlib.pyplot as plt
 import imageio
 import imutils
+from enum import Enum
 cv2.ocl.setUseOpenCL(False)
 
 # Constants
 
+class DescriptorType(Enum):
+    ORB = 1
+    BRISK = 2
+    SURF = 3
+    SIFT = 4
+    AKAZE = 5
+
+
 class PanoramaMaker:
-    def __init__(self):
+    def __init__(self, descriptor_type=DescriptorType.ORB):
         self.__counter = 0 # todo do I need that counter? maybe for later use
         self.__photos = [] # empty list named photos
         self.__featuresKeys = [] # empty list named features
         self.__check_first = 0
+        self.__descriptor_type = descriptor_type
+        self.__descriptor_func = self.__choose_descriptor_type()
 
+    def __choose_descriptor_type(self):
+        if self.__descriptor_type == DescriptorType.ORB:
+            return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.AKAZE:
+            try:
+                return cv2.AKAZE_create
+            except AttributeError:
+                print("AKAZE not available, choosing ORB")
+                return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.BRISK:
+            try:
+                return cv2.BRISK_create
+            except AttributeError:
+                print("BRISK not available, choosing ORB")
+                return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.SIFT:
+            try:
+                return cv2.xfeatures2d_SIFT.create
+            except AttributeError:
+                print("SIFT not available, choosing ORB")
+                return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.SURF:
+            try:
+                return cv2.xfeatures2d_SURF.create
+            except AttributeError:
+                print("SURF not available, choosing ORB")
+                return cv2.ORB.create
+        else:
+            print("no such descriptor, choosing ORB")
+            return cv2.ORB.create
 
-        pass
-
-    def add_photo(self, image, featuresKeys=None): #images pre-processing
-            # read image
-            photos.append(image) #needs to check the syntax
-            image_gray = cv2.cvtColor(photos[counter2], cv2.COLOR_RGB2GRAY) #now our photo in gray for data extraction
-            key_points, photo_features = detectAndDescribe(image_gray, method=feature_extractor) # todo - method?
-            featuresKeys.append(key_points, photo_features) # adding the photo information to the list as a tuple
-            if check_first < count(featuresKeys()[1]):
-                check_first = counter
-            counter++  # todo - again, do I need that counter?
+    def add_photo(self, image): #images pre-processing
+        # read image
+        self.__photos.append(image)
+        image_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) #now our photo in gray for data extraction
+        key_points, photo_features = self.__detectAndDescribe(image_gray)
+        self.__featuresKeys.append(key_points, photo_features) # adding the photo information to the list as a tuple
+        if self.__check_first < len(photo_features):
+            self.__check_first = self.__counter
+        self.__counter += 1  # todo - again, do I need that counter?
         
-        pass
-
         # once you have all images processing
         def create_panorama(self):
             # panorama =
 
             # search
 
-            return panorama
+            # return panorama
+            pass
 
 
 
-
-    def __detectAndDescribe(self, image, method=None):
+    def __detectAndDescribe(self, image):
         # Compute key points and feature descriptors using an specific method
-
-        assert method is not None, "You need to define a feature detection method. Values are: 'sift', 'surf'"
-
-        # detect and extract features from the image
-        if method == 'sift':
-            descriptor = cv2.xfeatures2d.SIFT_create()
-        elif method == 'surf':
-            descriptor = cv2.xfeatures2d.SURF_create()
-        elif method == 'brisk':
-            descriptor = cv2.BRISK_create()
-        elif method == 'orb':
-            descriptor = cv2.ORB_create()
-
+        descriptor = self.__descriptor_func()
         # get keypoints and descriptors
-        (kps, features) = descriptor.detectAndCompute(image, None)
+        return descriptor.detectAndCompute(image, None)
 
-        return (kps, features)
-
-
-    def __createMatcher(self, method, crossCheck): #create a matcher - NORM is chosen per extractor
-        "Create and return a Matcher Object"
-
-        if method == 'sift' or method == 'surf':
+    def __createMatcher(self, crossCheck):
+        # creates and returns a matcher object
+        # after feature-detection-description, feature matching is performed by using L2 norm
+        # for string-based descriptors, and Hamming distance for binary descriptors
+        if self.__descriptor_type == DescriptorType.SIFT or\
+                self.__descriptor_type == DescriptorType.SURF:
             bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=crossCheck)
-        elif method == 'orb' or method == 'brisk':
+        elif self.__descriptor_type == DescriptorType.ORB or self.__descriptor_type ==\
+                DescriptorType.BRISK or self.__descriptor_type == DescriptorType.AKAZE:
             bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=crossCheck)
+        else:
+            raise("should not get here")  # We dealt with that previously, ORB is defaulty
         return bf
 
 
-    def __matchKeyPointsBF(self, featuresKeys, method):
-        bf = createMatcher(method, crossCheck=True)
 
+
+
+
+    def __matchKeyPoints(self, featuresKeys, check_first, counter): # todo needs to add matcher object
+
+        if matcher_object == BF # todo needs to add BF and KNN
+            rawmatch = self.__matchKeyPointsBF(featuresKeys, )
+
+
+
+    def matchKeyPointsBF(self, featuresKeys, check_first, counter):
+        bf = createMatcher(crossCheck=True)
         # Match descriptors.
-        best_matches = bf.match(featuresA, featuresB)
 
-        # Sort the features in order of distance.
-        # The points with small distance (more similarity) are ordered first in the vector
-        rawMatches = sorted(best_matches, key=lambda x: x.distance)
-        print("Raw matches (Brute force):", len(rawMatches))
-        return rawMatches
-
-
-
-
-
-
+        index_a = check_first
+        index = 0
+        best_matches[[]] # todo - is that ok?
+        raw_match[]
+        for index < counter
+            if index_a != index
+                best_matches[index_a][index] = bf.match(featuresKeys[index_a], featuresKeys[index])
+                # sort the features in order of distance
+                # The points with small distance (more similarity) are ordered first in the vec
+                raw_Match.append = sorted(best_matches[index_a][index], key=lambda x: x.distance)
 
 
 
 
 
+            return rawMatches
+
+
+s
+        #
+        # # loop over the raw matches
+        # for m, n in rawMatches:
+        #     # ensure the distance is within a certain ratio of each
+        #     # other (i.e. Lowe's ratio test)
+        #     if m.distance < n.distance * ratio:
+        #         matches.append(m)
+        # return matches
 
 
 
 
-    #     """ blah balh ablhabla alhablah
-    #
-    #     :param self:
-    #     :param a: age
-    #     :param b: birthday
-    #
-    #     :return: blah balh
-    #     """
-    #     pass
-    #
-    # def create_panorama(self):
-    #
-    #     return panorama_img
+
+
+
+
+
+
+
+
 
