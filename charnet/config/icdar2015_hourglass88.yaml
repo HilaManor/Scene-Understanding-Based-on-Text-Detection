@@ -1,0 +1,7 @@
+INPUT_SIZE: 2280
+WEIGHT: "charnet/weights/icdar2015_hourglass88.pth"
+CHAR_DICT_FILE: "charnet/config/char_dict.txt"
+WORD_LEXICON_PATH: "charnet/config/GenericVocabulary.txt"
+SHORTWORD_LEXICON_PATH: "charnet/config/ShortVocabulary.txt"
+RESULTS_SEPARATOR: ","
+SIZE_DIVISIBILITY: 128

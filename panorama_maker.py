@@ -8,13 +8,10 @@
 # Imports
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import imageio
 import imutils
 from enum import Enum
 cv2.ocl.setUseOpenCL(False)
 
-# Constants
 
 class DescriptorType(Enum):
     ORB = 1
@@ -226,14 +223,3 @@ class PanoramaMaker:
             return matches
         else:
             raise ( "shouldn't get here!" )
-
-
-
-
-
-
-
-
-        pass
-
-
