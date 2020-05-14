@@ -104,14 +104,11 @@ class PanoramaMaker:
             del self.__photos[best_index]
             del self.__featuresKeys[best_index]
             self.__counter -= 1
-            panorama_gray = cv2.cvtColor(panorama, cv2.COLOR_RGB2GRAY)  # for data extraction
+            panorama_gray = cv2.cvtColor(panorama.astype(np.uint8), cv2.COLOR_RGB2GRAY)  # for data extraction
             panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
-        return panorama
+        return panorama.astype(np.uint8)
 
     def __warp_and_stitch(self, H, best_index, panorama):
-        width = self.__photos[best_index].shape[1] + panorama.shape[1]
-        height = self.__photos[best_index].shape[0] + panorama.shape[0]
-
         # check if warped photo is from the left or above the panorama
         p1 = H @ [0, 0, 1]
         p2 = H @ [0, self.__photos[best_index].shape[0] - 1, 1]
@@ -124,6 +121,12 @@ class PanoramaMaker:
         # for the panorama's coordinations system - position of image corners after transform
         xmin = min(p1[0], p2[0], p3[0], p4[0], 0)
         ymin = min(p1[1], p2[1], p3[1], p4[1], 0)
+        xmax = max(p1[0], p2[0], p3[0], p4[0], panorama.shape[1])
+        ymax = max(p1[1], p2[1], p3[1], p4[1], panorama.shape[0])
+
+        width = int(np.ceil(xmax - xmin))
+        height = int(np.ceil(ymax - ymin))
+
         # if one of them is negative - the photo will be cut !
         if xmin < 0 or ymin < 0:
             # needs to translate both the photo and the panorama, so nothing will be cropped
@@ -131,21 +134,22 @@ class PanoramaMaker:
                           [0, 1, -ymin],
                           [0, 0, 1]])
             TH = T @ H
-            result = cv2.warpPerspective(self.__photos[best_index], TH, (width, height))
+            result = cv2.warpPerspective(self.__photos[best_index].astype(np.float64), TH, (width, height), borderValue=(np.nan, np.nan, np.nan))
             t_panorama = cv2.warpPerspective(panorama.astype(np.float64), T, (width, height), borderValue=(np.nan, np.nan, np.nan))
             # find the new position of the panorama
             panorama_pos = ~np.isnan(t_panorama[:,:,0])
             result[panorama_pos] = t_panorama.astype(np.uint8)[panorama_pos]
         else:
-            result = cv2.warpPerspective(self.__photos[best_index], H, (width, height))
-            result[0:panorama.shape[0], 0:panorama.shape[1]] = panorama
+            result = cv2.warpPerspective(self.__photos[best_index].astype(np.float64), H, (width, height), borderValue=(np.nan, np.nan, np.nan))
+            panorama_pos = ~np.isnan(panorama[:, :, 0])
+            result[panorama_pos] = panorama.astype(np.uint8)[panorama_pos]
 
         # transform the panorama image to grayscale and threshold it
-        gray = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(result.astype(np.uint8), cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)[1]
 
         # Finds contours from the binary image
-        cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cnts = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cnts = imutils.grab_contours(cnts)
 
         # get the maximum contour area

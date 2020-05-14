@@ -31,10 +31,10 @@ def parse_dir(scene_path, output_path, charnet):
         im_file = os.path.join(scene_path, im_name)
         im_original = cv2.cvtColor(cv2.imread(im_file), cv2.COLOR_BGR2RGB)
 
-        # panorama_gen.add_photo(im_original)  # TODO ADIR
+        panorama_gen.add_photo(im_original)  # TODO ADIR
 
 
-    # panorama = panorama_gen.create_panorama()  # TODO ADIR
+    panorama = panorama_gen.create_panorama()  # TODO ADIR
     # TODO - success rate or something for panorama
     panorama = im_original
 
