@@ -10,7 +10,7 @@ import argparse
 import os
 import cv2
 
-from panorama_maker import PanoramaMaker
+from panorama_maker import PanoramaMaker, DescriptorType, MatcherType
 from image_windows import ImageWindows
 from charnet_runner import CharNetRunner
 from matplotlib import use
@@ -25,18 +25,17 @@ def parse_dir(scene_path, output_path, charnet):
     :param output_path: All of the algorithm output will be thrown out in this path
     :return: None
     """
-    panorama_gen = PanoramaMaker()
+    panorama_gen = PanoramaMaker(descriptor_type=DescriptorType.SIFT, matcher_type=MatcherType.KNN)
     for im_name in sorted(os.listdir(scene_path)):
         print("[+] Working on \"%s\"..." % im_name)
         im_file = os.path.join(scene_path, im_name)
         im_original = cv2.cvtColor(cv2.imread(im_file), cv2.COLOR_BGR2RGB)
+        panorama_gen.add_photo(im_original)
 
-        panorama_gen.add_photo(im_original)  # TODO ADIR
 
-
-    panorama = panorama_gen.create_panorama()  # TODO ADIR
+    panorama = panorama_gen.create_panorama()
     # TODO - success rate or something for panorama
-    panorama = im_original
+    # panorama = im_original
 
     windows = ImageWindows(panorama)
     # plt.figure()

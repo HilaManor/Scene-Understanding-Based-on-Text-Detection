@@ -9,3 +9,5 @@ research-charnet-master/datasets/*
 .idea/*
 *.pyc
 /charnet/weights/*.pth
+/cmake*
+/opencv*

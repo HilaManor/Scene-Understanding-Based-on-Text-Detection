@@ -29,12 +29,16 @@ class PanoramaMaker:
         self.__counter = 0 # todo do I need that counter? maybe for later use
         self.__photos = [] # empty list named photos
         self.__featuresKeys = [] # empty list named features
+        self.__counter = 0  # todo do I need that counter? maybe for later use
+        self.__photos = []
+        self.__featuresKeys = []
         self.__check_first = 0
         self.__descriptor_type = descriptor_type # todo - check: do I need here __ (as all - matcher)
         self.__descriptor_func = self.__choose_descriptor_type() # used in detectAndDescribe
         self.__matcher_type = matcher_type
         self.__ratio = ratio
         self.__reprojThresh = reprojThresh
+        self.__homographies = []
 
     def __choose_descriptor_type(self):
         if self.__descriptor_type == DescriptorType.ORB:
@@ -70,15 +74,17 @@ class PanoramaMaker:
     def add_photo(self, image): #images pre-processing
         # read image
         self.__photos.append(image)
-        image_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY) #for data extraction
-        key_points, photo_features = self.__detectAndDescribe(image_gray) # getting information
+        image_gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)  #for data extraction
+        key_points, photo_features = self.__detectAndDescribe(image_gray)  # getting information
         self.__featuresKeys.append((key_points, photo_features)) # adding the photo's information to the list as a tuple
-        if self.__check_first < len(photo_features): # for later use - who's will be first
+        if self.__check_first < len(photo_features):  # for later use - who's will be first
             self.__check_first = self.__counter
         self.__counter += 1
         
     # once you have all images processing
     def create_panorama(self):
+        self.__homographies = self.__reorder()
+
         # strating the panorama with the photo which helds mots features
         panorama = self.__photos[self.__check_first]
         panorama_kps, panorama_features = self.__featuresKeys[self.__check_first]
@@ -108,6 +114,67 @@ class PanoramaMaker:
             panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
         return panorama.astype(np.uint8)
 
+    def __reorder(self):
+        print('[+] Getting photo order...')
+        ordered_photos = [self.__photos[self.__check_first]]
+        ordered_featureKeys = [self.__featuresKeys[self.__check_first]]
+        homographies = []
+        del self.__photos[self.__check_first]
+        del self.__featuresKeys[self.__check_first]
+
+        while len(self.__photos):
+            best_i_r = -1
+            best_i_l = -1
+            H_r = None
+            H_l = None
+            best_match_r = None
+            best_match_l = None
+            # whos the best from the left
+            ignore_l_i = []
+            while best_i_l == -1 and len(ignore_l_i) < len(self.__photos):
+                best_i_l, best_match_l = self.__get_best_match_from_photos(ordered_featureKeys[0][1], ignore_l_i)
+                H_l, status = self.__get_homography(best_match_l, ordered_featureKeys[0][0],
+                                                    best_i_l, self.__reprojThresh)
+                # not really from the left match
+                if H_l[0, 2] >= 0:
+                    ignore_l_i.append(best_i_l)
+                    best_i_l = -1  # continue to search
+
+            # whos the best from the right
+            ignore_r_i = []
+            while best_i_r == -1 and len(ignore_r_i) < len(self.__photos):
+                best_i_r, best_match_r = self.__get_best_match_from_photos(ordered_featureKeys[-1][1], ignore_r_i)
+                H_r, status = self.__get_homography(best_match_r, ordered_featureKeys[-1][0],
+                                                    best_i_r, self.__reprojThresh)
+                # not really from the right match
+                if H_r[0, 2] <= 0:
+                    ignore_r_i.append(best_i_r)
+                    best_i_r = -1  # continue to search
+
+            # we found a possible match from the right and possible match from the left.
+            # we shall only choose to keep the better match, to minimize errors (this makes it
+            # possible for a situation where image 5 was match to 123 from the left and 4 was
+            # matched on the right. we hope that the 4 will have more matches, and so 5 will get
+            # stitched correctly to 1234 next iteration
+            if best_i_l != -1 and len(best_match_l) > len(best_match_r):
+                ordered_photos = [self.__photos[best_i_l]] + ordered_photos
+                ordered_featureKeys = [self.__featuresKeys[best_i_l]] + ordered_featureKeys
+                homographies.append(H_l)
+                del self.__photos[best_i_l]
+                del self.__featuresKeys[best_i_l]
+            elif best_i_r != -1:
+                ordered_photos.append(self.__photos[best_i_r])
+                ordered_featureKeys.append(self.__featuresKeys[best_i_r])
+                homographies.append(H_r)
+                del self.__photos[best_i_r]
+                del self.__featuresKeys[best_i_r]
+            else:
+                raise NotImplementedError("Can't connect all photos")
+                # todo: then what? continue to the other photos?
+        # all photos possible were connected
+        self.__photos = ordered_photos
+        self.__featuresKeys = ordered_featureKeys
+        return homographies
     def __warp_and_stitch(self, H, best_index, panorama):
         # check if warped photo is from the left or above the panorama
         p1 = H @ [0, 0, 1]
@@ -162,7 +229,7 @@ class PanoramaMaker:
         result = result[y:y + h, x:x + w]
         return result
 
-    def __get_homography(self, matches, panorama_kps, panorama_features, best_index, reprojThresh): # B is panorama
+    def __get_homography(self, matches, panorama_kps, best_index, reprojThresh):  # B is panorama
         kps_new = np.float32([kp.pt for kp in self.__featuresKeys[best_index][0]])
         kps_panorama = np.float32([kp.pt for kp in panorama_kps])
 
@@ -172,17 +239,17 @@ class PanoramaMaker:
             pts_panorama = np.float32([kps_panorama[m.trainIdx] for m in matches])
 
             # estimate the homography between the sets of points
-            (H, status) = cv2.findHomography(pts_new, pts_panorama, cv2.RANSAC, reprojThresh)
-
-            return (matches, H, status)
+            return cv2.findHomography(pts_new, pts_panorama, cv2.RANSAC, reprojThresh)
         else:
             return None
 
-    def __get_best_match(self, panorama_features):
+    def __get_best_match_from_photos(self, to_match_features, ignore_idxs=[]):
         best_matches = []
         best_index = None
         for i in range(len(self.__featuresKeys)):
-            matches = self.__matchKeyPoints(self.__featuresKeys[i][1], panorama_features)
+            if i in ignore_idxs:
+                continue
+            matches = self.__matchKeyPoints(self.__featuresKeys[i][1], to_match_features)
             if len(matches) > len(best_matches):
                 best_index = i
                 best_matches = matches
