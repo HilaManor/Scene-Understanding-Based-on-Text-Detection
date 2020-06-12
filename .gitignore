@@ -3,6 +3,7 @@
 /8.pdf
 /9.pdf
 *.jpg
+*.jpeg
 *.png
 *.zip
 research-charnet-master/datasets/*

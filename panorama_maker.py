@@ -26,9 +26,6 @@ class MatcherType(Enum):
 
 class PanoramaMaker:
     def __init__(self, descriptor_type=DescriptorType.ORB, matcher_type=MatcherType.BF, ratio=0.75, reprojThresh=4):
-        self.__counter = 0 # todo do I need that counter? maybe for later use
-        self.__photos = [] # empty list named photos
-        self.__featuresKeys = [] # empty list named features
         self.__counter = 0  # todo do I need that counter? maybe for later use
         self.__photos = []
         self.__featuresKeys = []
@@ -40,36 +37,6 @@ class PanoramaMaker:
         self.__reprojThresh = reprojThresh
         self.__homographies = []
 
-    def __choose_descriptor_type(self):
-        if self.__descriptor_type == DescriptorType.ORB:
-            return cv2.ORB.create
-        elif self.__descriptor_type == DescriptorType.AKAZE:
-            try:
-                return cv2.AKAZE_create
-            except AttributeError:
-                print("AKAZE not available, choosing ORB")
-                return cv2.ORB.create
-        elif self.__descriptor_type == DescriptorType.BRISK:
-            try:
-                return cv2.BRISK_create
-            except AttributeError:
-                print("BRISK not available, choosing ORB")
-                return cv2.ORB.create
-        elif self.__descriptor_type == DescriptorType.SIFT:
-            try:
-                return cv2.xfeatures2d_SIFT.create
-            except AttributeError:
-                print("SIFT not available, choosing ORB")
-                return cv2.ORB.create
-        elif self.__descriptor_type == DescriptorType.SURF:
-            try:
-                return cv2.xfeatures2d_SURF.create
-            except AttributeError:
-                print("SURF not available, choosing ORB")
-                return cv2.ORB.create
-        else:
-            print("no such descriptor, choosing ORB")
-            return cv2.ORB.create
 
     def add_photo(self, image): #images pre-processing
         # read image
@@ -85,33 +52,25 @@ class PanoramaMaker:
     def create_panorama(self):
         self.__homographies = self.__reorder()
 
+        print("[+] Stitching panorama...")
         # strating the panorama with the photo which helds mots features
-        panorama = self.__photos[self.__check_first]
-        panorama_kps, panorama_features = self.__featuresKeys[self.__check_first]
-        del self.__photos[self.__check_first]
-        del self.__featuresKeys[self.__check_first]
-        self.__counter -= 1
+        panorama = self.__photos[0]
+        panorama_kps, panorama_features = self.__featuresKeys[0]
+        # del self.__photos[0]
+        # del self.__featuresKeys[0]
+        # self.__counter -= 1
 
         # loop for all other photos
-        while self.__counter:
-            # Who's best match: by the matches length
-            best_index, matches = self.__get_best_match(panorama_features)
-
-            # For the best, we'll find homograpghy
-            homography_result = self.__get_homography(matches, panorama_kps, panorama_features, best_index, self.__reprojThresh) # B in panorama
-            if not homography_result:
-                raise ( "No homograpghy found!" ) # todo: then what? continue to the other photos?
-
-            # warp and stitch
-            matches, H, status = homography_result
+        for i in range(1, len(self.__photos) + 1):
             # The stitched photo is the next one
-            panorama = self.__warp_and_stitch(H, best_index, panorama)
+            panorama = self.__warp_and_stitch(self.__homographies[i], i, panorama)
             # delete used photo
-            del self.__photos[best_index]
-            del self.__featuresKeys[best_index]
-            self.__counter -= 1
-            panorama_gray = cv2.cvtColor(panorama.astype(np.uint8), cv2.COLOR_RGB2GRAY)  # for data extraction
-            panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
+            # del self.__photos[best_index]
+            # del self.__featuresKeys[best_index]
+            # self.__counter -= 1
+            # panorama_gray = cv2.cvtColor(panorama.astype(np.uint8), cv2.COLOR_RGB2GRAY)  # for data extraction
+            # panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
+
         return panorama.astype(np.uint8)
 
     def __reorder(self):
@@ -123,6 +82,7 @@ class PanoramaMaker:
         del self.__featuresKeys[self.__check_first]
 
         while len(self.__photos):
+            print("[*] Connecting %d photos..." % len(self.__photos), end='\r')
             best_i_r = -1
             best_i_l = -1
             H_r = None
@@ -175,6 +135,7 @@ class PanoramaMaker:
         self.__photos = ordered_photos
         self.__featuresKeys = ordered_featureKeys
         return homographies
+
     def __warp_and_stitch(self, H, best_index, panorama):
         # check if warped photo is from the left or above the panorama
         p1 = H @ [0, 0, 1]
@@ -185,7 +146,7 @@ class PanoramaMaker:
         p2 = p2 * (1.0 / p2[2])
         p3 = p3 * (1.0 / p3[2])
         p4 = p4 * (1.0 / p4[2])
-        # for the panorama's coordinations system - position of image corners after transform
+        # for the panorama's coordinate system - position of image corners after transform
         xmin = min(p1[0], p2[0], p3[0], p4[0], 0)
         ymin = min(p1[1], p2[1], p3[1], p4[1], 0)
         xmax = max(p1[0], p2[0], p3[0], p4[0], panorama.shape[1])
@@ -220,7 +181,7 @@ class PanoramaMaker:
         cnts = imutils.grab_contours(cnts)
 
         # get the maximum contour area
-        c = max(cnts, key=cv2.contourArea)
+        c = max(cnts, key=cv2.contourArea)  # TODO HM
 
         # get a bbox from the contour area
         (x, y, w, h) = cv2.boundingRect(c)
@@ -259,6 +220,7 @@ class PanoramaMaker:
         # Compute key points and feature descriptors using an specific method
         descriptor = self.__descriptor_func()
         # get keypoints and descriptors
+        # TODO HM no max
         return descriptor.detectAndCompute(image, None)
 
     def __createMatcher(self, crossCheck):
@@ -294,3 +256,34 @@ class PanoramaMaker:
             return matches
         else:
             raise ( "shouldn't get here!" )
+
+    def __choose_descriptor_type(self):
+        if self.__descriptor_type == DescriptorType.ORB:
+            return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.AKAZE:
+            try:
+                return cv2.AKAZE_create
+            except AttributeError:
+                print("AKAZE not available, choosing ORB")
+                return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.BRISK:
+            try:
+                return cv2.BRISK_create
+            except AttributeError:
+                print("BRISK not available, choosing ORB")
+                return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.SIFT:
+            try:
+                return cv2.xfeatures2d_SIFT.create
+            except AttributeError:
+                print("SIFT not available, choosing ORB")
+                return cv2.ORB.create
+        elif self.__descriptor_type == DescriptorType.SURF:
+            try:
+                return cv2.xfeatures2d_SURF.create
+            except AttributeError:
+                print("SURF not available, choosing ORB")
+                return cv2.ORB.create
+        else:
+            print("no such descriptor, choosing ORB")
+            return cv2.ORB.create
