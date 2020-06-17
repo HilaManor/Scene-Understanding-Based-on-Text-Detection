@@ -386,23 +386,22 @@ class PanoramaMaker:
             return cv2.ORB.create
 
 
-'''
-Warp an image from cartesian coordinates (x, y) into cylindrical coordinates (theta, h)
-Returns: (image, mask)
-Mask is [0,255], and has 255s wherever the cylindrical images has a valid value.
-Masks are useful for stitching
-
-Usage example:
-
-    im = cv2.imread("myimage.jpg",0) #grayscale
-    h,w = im.shape
-    f = 700
-    K = np.array([[f, 0, w/2], [0, f, h/2], [0, 0, 1]]) # mock calibration matrix
-    imcyl = cylindricalWarpImage(im, K)
-'''
 def __warp_cylindrical_to_cartesian(img1, focal_length):
+    """Warp an image from cartesian coordinates (x, y) into cylindrical coordinates (theta, h)
 
-    im_h,im_w = img1.shape
+    Returns: (image, mask)
+    Mask is [0,255], and has 255s wherever the cylindrical images has a valid value.
+    Masks are useful for stitching
+
+    Usage example:
+
+        im = cv2.imread("myimage.jpg",0) #grayscale
+        h,w = im.shape
+        f = 700
+        K = np.array([[f, 0, w/2], [0, f, h/2], [0, 0, 1]]) # mock calibration matrix
+        imcyl = cylindricalWarpImage(im, K)
+    """
+    im_h, im_w = img1.shape
 
     # go inverse from cylindrical coord to the image
     # (this way there are no gaps)
@@ -420,12 +419,12 @@ def __warp_cylindrical_to_cartesian(img1, focal_length):
     flat_h = np.reshape(h, (1,-1))
     flat_sin_theta = np.reshape(sin_theta, (1, -1))
     flat_cos_theta = np.reshape(cos_theta, (1, -1))
-    cartesian = np.stack((flat_sin_theta, flat_h, flat_cos_theta), axis=0)
+    cartesian_coords = np.stack((flat_sin_theta, flat_h, flat_cos_theta), axis=0)
     K = np.array([[focal_length, 0, cyl_w / 2], [0, focal_length, cyl_h / 2], [0, 0, 1]])
     # calibration matrix
-    cylX = np.dot(K, X)
-    x_im = cylX[0] / cylX[2]
-    y_im = cylX[1] / cylX[2]
+    cyl_coords = np.dot(K, cartesian_coords)
+    x_im = cyl_coords[0] / cyl_coords[2]
+    y_im = cyl_coords[1] / cyl_coords[2]
     valid_x_im = x_im[(x_im > 0) & (x_im < im_w)]
     valid_y_im = y_im[(y_im > 0) & (y_im < im_h)]
     xy = np.stack((x_im.reshape(img1.shape), y_im.reshape(img1.shape)), axis=2)
