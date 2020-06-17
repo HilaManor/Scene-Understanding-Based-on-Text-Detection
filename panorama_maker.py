@@ -59,25 +59,22 @@ class PanoramaMaker:
     # once you have all images processing
     def create_panorama(self):
         self.__homographies = self.__reorder()
+        last_matches = self.__match_keypoints(self.__featuresKeys[0][1], self.__featuresKeys[-1][1])
+        H_last, status = self.__get_homography(last_matches, self.__featuresKeys[-1][0], 0, self.__reprojThresh)
+
+
         f = self.__estimate_focal_length()
 
         print("[+] Stitching panorama...")
-        panorama = self.__photos[0]
-        # panorama_kps, panorama_features = self.__featuresKeys[0]
-        # del self.__photos[0]
-        # del self.__featuresKeys[0]
-        # self.__counter -= 1
-
-        # loop for all other photos
-        for i in range(1, len(self.__photos) + 1):
-            # The stitched photo is the next one
-            panorama = self.__warp_and_stitch(self.__homographies[i], i, panorama)
-            # delete used photo
-            # del self.__photos[best_index]
-            # del self.__featuresKeys[best_index]
-            # self.__counter -= 1
+        panorama = self.__warp_cylindrical_to_cartesian(self.__photos[0])
+        for idx in range(1, len(self.__photos)):
+            cyl_photo = self.__warp_cylindrical_to_cartesian(self.__photos[idx], f)
+            # retake homography/affine?
+            panorama = self.__warp_and_stitch(self.__homographies[idx-0], cyl_photo, panorama)
             # panorama_gray = cv2.cvtColor(panorama.astype(np.uint8), cv2.COLOR_RGB2GRAY)  # for data extraction
             # panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
+
+
 
         return panorama.astype(np.uint8)
 
@@ -125,7 +122,7 @@ class PanoramaMaker:
             # possible for a situation where image 5 was match to 123 from the left and 4 was
             # matched on the right. we hope that the 4 will have more matches, and so 5 will get
             # stitched correctly to 1234 next iteration
-            if best_i_l != -1 and len(best_match_l) > len(best_match_r):
+            if best_i_l != -1 and len(best_match_l) >= len(best_match_r):
                 ordered_photos = [self.__photos[best_i_l]] + ordered_photos
                 ordered_featureKeys = [self.__featuresKeys[best_i_l]] + ordered_featureKeys
                 homographies.append(H_l)
@@ -145,12 +142,12 @@ class PanoramaMaker:
         self.__featuresKeys = ordered_featureKeys
         return homographies
 
-    def __warp_and_stitch(self, H, dst_index, panorama):
+    def __warp_and_stitch(self, H, add_photo, panorama):
         # check if warped photo is from the left or above the panorama
         p1 = H @ [0, 0, 1]
-        p2 = H @ [0, self.__photos[dst_index].shape[0] - 1, 1]
-        p3 = H @ [self.__photos[dst_index].shape[1] - 1, self.__photos[dst_index].shape[0] - 1, 1]
-        p4 = H @ [self.__photos[dst_index].shape[1] - 1, 0, 1]
+        p2 = H @ [0, add_photo.shape[0] - 1, 1]
+        p3 = H @ [add_photo.shape[1] - 1, add_photo.shape[0] - 1, 1]
+        p4 = H @ [add_photo.shape[1] - 1, 0, 1]
         p1 = p1 * (1.0 / p1[2])
         p2 = p2 * (1.0 / p2[2])
         p3 = p3 * (1.0 / p3[2])
@@ -171,7 +168,7 @@ class PanoramaMaker:
                           [0, 1, -y_min],
                           [0, 0, 1]])
             TH = T @ H
-            result = cv2.warpPerspective(self.__photos[dst_index].astype(np.float64), TH,
+            result = cv2.warpPerspective(add_photo.astype(np.float64), TH,
                                          (width, height), borderValue=(np.nan, np.nan, np.nan))
             t_panorama = cv2.warpPerspective(panorama.astype(np.float64), T,
                                              (width, height), borderValue=(np.nan, np.nan, np.nan))
@@ -179,7 +176,7 @@ class PanoramaMaker:
             panorama_pos = ~np.isnan(t_panorama[:, :, 0])
             result[panorama_pos] = t_panorama.astype(np.uint8)[panorama_pos]
         else:
-            result = cv2.warpPerspective(self.__photos[dst_index].astype(np.float64), H,
+            result = cv2.warpPerspective(add_photo.astype(np.float64), H,
                                          (width, height), borderValue=(np.nan, np.nan, np.nan))
             panorama_pos = ~np.isnan(panorama[:, :, 0])
             result[panorama_pos] = panorama.astype(np.uint8)[panorama_pos]
