@@ -12,7 +12,9 @@ import imutils
 from enum import Enum
 cv2.ocl.setUseOpenCL(False)
 
-
+'''
+Methods for Keypoints and Descriptors extraction
+'''
 class DescriptorType(Enum):
     ORB = 1
     BRISK = 2
@@ -21,11 +23,21 @@ class DescriptorType(Enum):
     AKAZE = 5
 
 
+'''
+Having features from two images - this algorithms match those features 
+'''
 class MatcherType(Enum):
     BF = 1
     KNN = 2
 
-
+'''
+The main class
+counter - will contain the number of images (tot) that's going to be stitched
+check_first - first photo we're going to work on
+ratio (KNN) - For each pair of features, if the distance between them is within a certain ratio
+        we keep it, otherwise, we throw it away (defined by lowest)
+reprojThresh - parameter for RANSAC for homography computation        
+'''
 class PanoramaMaker:
     def __init__(self, descriptor_type=DescriptorType.ORB, matcher_type=MatcherType.BF,
                  ratio=0.75, reprojThresh=4):
@@ -43,8 +55,10 @@ class PanoramaMaker:
     def add_photo(self, image):
         """images pre-processing
 
-        :param image:
-        :return:
+        converts images to grayscale, then extract Key points and descriptors ('features')
+        We fill featuresKeys[] to hold that data (as a tuple)
+        Also find the index to the photo which holds the most features (check_first)
+
         """
         # read image
         self.__photos.append(image)
@@ -56,7 +70,9 @@ class PanoramaMaker:
             self.__check_first = self.__counter
         self.__counter += 1
         
-    # once you have all images processing
+    '''
+    The Main func - creates the panorama
+    '''
     def create_panorama(self):
         self.__homographies = self.__reorder()
         last_matches = self.__match_keypoints(self.__featuresKeys[0][1], self.__featuresKeys[-1][1])
@@ -288,16 +304,19 @@ class PanoramaMaker:
         else:
             raise Exception("[X] Couldn't estimate focals")
 
+    '''
+    compute Key points and features descriptors
+    '''
     def __detect_and_describe(self, image):
-        # Compute key points and feature descriptors using an specific method
         descriptor = self.__descriptor_func()
-        # get key-points and descriptors
         return descriptor.detectAndCompute(image, None)
 
+    '''
+    creates a BruteForce Matcher using OpenCV
+    for string-based descriptors, and Hamming distance for binary descriptors
+    cross_check - for a pair of features to considered valid, f1 needs to match f2 and vice versa
+    '''
     def __create_matcher(self, cross_check):
-        # creates and returns a matcher object
-        # after feature-detection-description, feature matching is performed by using L2 norm
-        # for string-based descriptors, and Hamming distance for binary descriptors
         if self.__descriptor_type == DescriptorType.SIFT or\
                 self.__descriptor_type == DescriptorType.SURF:
             bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=cross_check)
@@ -309,6 +328,9 @@ class PanoramaMaker:
             raise Exception("should not get here")
         return bf
 
+    '''
+    The matcher algorithm will give us the best (more similar) set of features from both images
+    '''
     def __match_keypoints(self, features_a, features_b):
         cross_check = (self.__matcher_type == MatcherType.BF)
         bf = self.__create_matcher(cross_check)
@@ -329,6 +351,9 @@ class PanoramaMaker:
         else:
             raise Exception("shouldn't get here!")
 
+    '''
+    The user may choose his algorithm for features extraction (5 types)
+    '''
     def __choose_descriptor_type(self):
         if self.__descriptor_type == DescriptorType.ORB:
             return cv2.ORB.create
@@ -359,3 +384,53 @@ class PanoramaMaker:
         else:
             print("no such descriptor, choosing ORB")
             return cv2.ORB.create
+
+
+'''
+Warp an image from cartesian coordinates (x, y) into cylindrical coordinates (theta, h)
+Returns: (image, mask)
+Mask is [0,255], and has 255s wherever the cylindrical images has a valid value.
+Masks are useful for stitching
+
+Usage example:
+
+    im = cv2.imread("myimage.jpg",0) #grayscale
+    h,w = im.shape
+    f = 700
+    K = np.array([[f, 0, w/2], [0, f, h/2], [0, 0, 1]]) # mock calibration matrix
+    imcyl = cylindricalWarpImage(im, K)
+'''
+def __warp_cylindrical_to_cartesian(img1, focal_length):
+
+    im_h,im_w = img1.shape
+
+    # go inverse from cylindrical coord to the image
+    # (this way there are no gaps)
+    cyl = np.zeros_like(img1)
+    # np.zeros_like : Return an array of zeros with the same shape and type as a given array
+    cyl_mask = np.zeros_like(img1)
+    cyl_h, cyl_w = cyl.shape                  #check
+    x_c = float(cyl_w) / 2.0
+    y_c = float(cyl_h) / 2.0
+    x, y = np.meshgrid(np.arange(0,cyl_w), np.arange(0,cyl_h))
+    theta = (x - x_c) / focal_length
+    h = (y - y_c) / focal_length
+    sin_theta = np.sin(theta)
+    cos_theta = np.cos(theta)
+    flat_h = np.reshape(h, (1,-1))
+    flat_sin_theta = np.reshape(sin_theta, (1, -1))
+    flat_cos_theta = np.reshape(cos_theta, (1, -1))
+    cartesian = np.stack((flat_sin_theta, flat_h, flat_cos_theta), axis=0)
+    K = np.array([[focal_length, 0, cyl_w / 2], [0, focal_length, cyl_h / 2], [0, 0, 1]])
+    # calibration matrix
+    cylX = np.dot(K, X)
+    x_im = cylX[0] / cylX[2]
+    y_im = cylX[1] / cylX[2]
+    valid_x_im = x_im[(x_im > 0) & (x_im < im_w)]
+    valid_y_im = y_im[(y_im > 0) & (y_im < im_h)]
+    xy = np.stack((x_im.reshape(img1.shape), y_im.reshape(img1.shape)), axis=2)
+    idx_valid_x, idx_valid_y = ( (xy[:, :, 0] > 0) & (xy[:, :, 0] < im_w) &
+                                 (xy[:, :, 1] > 0) & (xy[:, :, 1] < im_h) ).nonzero()
+    cyl[idx_valid_x, idx_valid_y] = img1[int(valid_y_im), int(valid_x_im)]
+    cyl_mask[idx_valid_x, idx_valid_y] = 255
+    return cyl, cyl_mask
