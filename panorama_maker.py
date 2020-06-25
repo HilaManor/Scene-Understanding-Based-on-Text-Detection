@@ -75,24 +75,65 @@ class PanoramaMaker:
     '''
     def create_panorama(self):
         self.__homographies = self.__reorder()
-        last_matches = self.__match_keypoints(self.__featuresKeys[0][1], self.__featuresKeys[-1][1])
-        H_last, status = self.__get_homography(last_matches, self.__featuresKeys[-1][0], 0, self.__reprojThresh)
-
+        last_matches = self.__match_keypoints(self.__featuresKeys[0][1],
+                                              self.__featuresKeys[-1][1])
+        H_last, status = self.__get_homography(last_matches, self.__featuresKeys[-1][0], self.__featuresKeys[0][0],
+                                               self.__reprojThresh)
 
         f = self.__estimate_focal_length()
 
+        print("[+] warping photos to cylindrical format...")
+        affines, cyl_featureKeys, cyl_photos = self.__make_everything_cylindrical(f)
+
+        # import pickle
+        # fh = open('Horev_reorder.pickle', 'wb')
+        # kpss = []
+        # featursss =[]
+        # for i in range(len(cyl_featureKeys)):
+        #     featursss.append(cyl_featureKeys[i][1])
+        #     kp = []
+        #     for point in cyl_featureKeys[i][0]:
+        #         temp = (point.pt, point.size, point.angle, point.response, point.octave, point.class_id)
+        #         kp.append(temp)
+        #     kpss.append(kp)
+        # pickle.dump([affines, featursss, kpss, cyl_photos], fh)
+        # fh.close()
+
+        # import pickle
+        # with open('./Data/Haifa_reorder.pickle', 'rb') as fh:
+        #     pickle_arr = pickle.load(fh)
+        # affines = pickle_arr[0]
+        # featursss = pickle_arr[1]
+        # kpss = pickle_arr[2]
+        # cyl_photos = pickle_arr[3]
+        # cyl_featureKeys = []
+        # for i in range(len(featursss)):
+        #     temp = []
+        #     for point in kpss[i]:
+        #         temp_feature = cv2.KeyPoint(x=point[0][0], y=point[0][1], _size=point[1],
+        #                                     _angle=point[2], _response=point[3], _octave=point[4],
+        #                                     _class_id=point[5])
+        #         temp.append(temp_feature)
+        #     cyl_featureKeys.append((temp, featursss[i]))
+
+
         print("[+] Stitching panorama...")
-        panorama = self.__warp_cylindrical_to_cartesian(self.__photos[0])
+        # we start from the right to avoid drifting upwards
+        panorama = cyl_photos[0]
+        A = np.eye(2, 3)
+        y_min = 0
         for idx in range(1, len(self.__photos)):
-            cyl_photo = self.__warp_cylindrical_to_cartesian(self.__photos[idx], f)
-            # retake homography/affine?
-            panorama = self.__warp_and_stitch(self.__homographies[idx-0], cyl_photo, panorama)
-            # panorama_gray = cv2.cvtColor(panorama.astype(np.uint8), cv2.COLOR_RGB2GRAY)  # for data extraction
-            # panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
+            A = _multiply_affine( affines[idx-1], A)
+            y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min)
 
+        print("h")
+        # panorama = self.__warp_and_stitch_homography(self.__homographies[idx - 1], panorama, cyl_photo)
+        # # panorama_gray = cv2.cvtColor(panorama.astype(np.uint8), cv2.COLOR_RGB2GRAY)  # for data extraction
+        # # panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
 
+        # full cyl panorama
 
-        return panorama.astype(np.uint8)
+        # return panorama.astype(np.uint8)
 
     def __reorder(self):
         print('[+] Getting photo order...')
@@ -116,7 +157,7 @@ class PanoramaMaker:
                 best_i_l, best_match_l = self.__get_best_match_from_photos(
                     ordered_featureKeys[0][1], ignore_l_i)
                 H_l, status = self.__get_homography(best_match_l, ordered_featureKeys[0][0],
-                                                    best_i_l, self.__reprojThresh)
+                                                    self.__featuresKeys[best_i_l][0], self.__reprojThresh)
                 # not really from the left match
                 if H_l[0, 2] >= 0:
                     ignore_l_i.append(best_i_l)
@@ -127,7 +168,7 @@ class PanoramaMaker:
             while best_i_r == -1 and len(ignore_r_i) < len(self.__photos):
                 best_i_r, best_match_r = self.__get_best_match_from_photos(ordered_featureKeys[-1][1], ignore_r_i)
                 H_r, status = self.__get_homography(best_match_r, ordered_featureKeys[-1][0],
-                                                    best_i_r, self.__reprojThresh)
+                                                    self.__featuresKeys[best_i_r][0], self.__reprojThresh)
                 # not really from the right match
                 if H_r[0, 2] <= 0:
                     ignore_r_i.append(best_i_r)
@@ -141,7 +182,7 @@ class PanoramaMaker:
             if best_i_l != -1 and len(best_match_l) >= len(best_match_r):
                 ordered_photos = [self.__photos[best_i_l]] + ordered_photos
                 ordered_featureKeys = [self.__featuresKeys[best_i_l]] + ordered_featureKeys
-                homographies.append(H_l)
+                homographies.append(np.linalg.inv(H_l))
                 del self.__photos[best_i_l]
                 del self.__featuresKeys[best_i_l]
             elif best_i_r != -1:
@@ -158,7 +199,79 @@ class PanoramaMaker:
         self.__featuresKeys = ordered_featureKeys
         return homographies
 
-    def __warp_and_stitch(self, H, add_photo, panorama):
+    def __make_everything_cylindrical(self, f):
+        cyl_photo, mask = _warp_cylindrical_to_cartesian(self.__photos[0], f)
+        cyl_photos = [_fill_with_nan_mask(cyl_photo, mask)]
+        image_gray = cv2.cvtColor(cyl_photos[0].astype(np.uint8), cv2.COLOR_RGB2GRAY)
+        key_points, photo_features = self.__detect_and_describe(image_gray)
+        cyl_featureKeys = [(key_points, photo_features)]
+        affines = []
+
+        for i in range(1, len(self.__photos)):
+            cyl_photo, mask = _warp_cylindrical_to_cartesian(self.__photos[i], f)
+            cyl_photos.append(_fill_with_nan_mask(cyl_photo, mask))
+            image_gray = cv2.cvtColor(cyl_photo.astype(np.uint8), cv2.COLOR_RGB2GRAY)
+            key_points, photo_features = self.__detect_and_describe(image_gray)
+            cyl_featureKeys.append((key_points, photo_features))
+            matches = self.__match_keypoints(cyl_featureKeys[i][1], cyl_featureKeys[i-1][1])
+            A, status = self.__get_homography(matches, cyl_featureKeys[i-1][0],
+                                              cyl_featureKeys[i][0], self.__reprojThresh,
+                                              isAffine=True)
+            affines.append(A)
+
+        return affines, cyl_featureKeys, cyl_photos
+
+    def __stitch_cylindrical(self, base_photo, add_photo, A, y_min_last=0):
+        # we assume the added photo is from the left
+
+        p1 = A @ [0, 0, 1]
+        p2 = A @ [0, add_photo.shape[0] - 1, 1]
+        p3 = A @ [add_photo.shape[1] - 1, add_photo.shape[0] - 1, 1]
+        p4 = A @ [add_photo.shape[1] - 1, 0, 1]
+
+        # for the panorama's coordinate system - position of image corners after transform
+        y_min = min(p1[1], p2[1], p3[1], p4[1], 0)
+        x_max = max(p1[0], p2[0], p3[0], p4[0], base_photo.shape[1])
+        y_max = max(p1[1], p2[1], p3[1], p4[1], base_photo.shape[0])
+
+        width = int(np.ceil(x_max))
+        height = int(np.ceil(y_max - y_min))
+
+        # the photo will be cut !
+        T = np.eye(2,3)
+        #if y_min < 0:
+        #    T = np.array([[1, 0, 0],
+        #                  [0, 1, -y_min]])
+
+        TA = _multiply_affine(T, A)
+        # needs to translate both the photo and the panorama, so nothing will be cropped
+        result = cv2.warpAffine(add_photo, TA, (width, height),
+                                borderValue=(np.nan, np.nan, np.nan))
+        t_base_photo = cv2.warpAffine(base_photo.astype(np.float64), T, (width, height),
+                                    borderValue=(np.nan, np.nan, np.nan))
+        # find the new position of the base_photo
+        base_photo_pos = ~np.isnan(t_base_photo[:, :, 0])
+        result[base_photo_pos] = t_base_photo.astype(np.uint8)[base_photo_pos]
+
+        # transform the panorama image to grayscale and threshold it
+        gray = cv2.cvtColor(result.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)[1]
+
+        # Finds contours from the binary image
+        contours = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours = imutils.grab_contours(contours)
+
+        # get the maximum contour area
+        c = max(contours, key=cv2.contourArea)
+
+        # get a bbox from the contour area
+        (x, y, w, h) = cv2.boundingRect(c)
+
+        # crop the image to the bbox coordinates
+        result = result[y:y + h, x:x + w]
+        return y_min, result
+
+    def __warp_and_stitch_homography(self, H, add_photo, panorama):
         # check if warped photo is from the left or above the panorama
         p1 = H @ [0, 0, 1]
         p2 = H @ [0, add_photo.shape[0] - 1, 1]
@@ -215,8 +328,8 @@ class PanoramaMaker:
         result = result[y:y + h, x:x + w]
         return result
 
-    def __get_homography(self, matches, panorama_kps, best_index, reproj_thresh):  # B is panorama
-        kps_new = np.float32([kp.pt for kp in self.__featuresKeys[best_index][0]])
+    def __get_homography(self, matches, panorama_kps, src_kps, reproj_thresh, isAffine=False):  # B is panorama
+        kps_new = np.float32([kp.pt for kp in src_kps])
         kps_panorama = np.float32([kp.pt for kp in panorama_kps])
 
         if len(matches) > 4:
@@ -225,7 +338,10 @@ class PanoramaMaker:
             pts_panorama = np.float32([kps_panorama[m.trainIdx] for m in matches])
 
             # estimate the homography between the sets of points
-            return cv2.findHomography(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
+            if isAffine:
+                return cv2.estimateAffine2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
+            else:
+                return cv2.findHomography(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
         else:
             return None
 
@@ -304,19 +420,19 @@ class PanoramaMaker:
         else:
             raise Exception("[X] Couldn't estimate focals")
 
-    '''
-    compute Key points and features descriptors
-    '''
     def __detect_and_describe(self, image):
+        ''' compute Key points and features descriptors
+        '''
         descriptor = self.__descriptor_func()
         return descriptor.detectAndCompute(image, None)
 
-    '''
-    creates a BruteForce Matcher using OpenCV
-    for string-based descriptors, and Hamming distance for binary descriptors
-    cross_check - for a pair of features to considered valid, f1 needs to match f2 and vice versa
-    '''
     def __create_matcher(self, cross_check):
+        '''
+        creates a BruteForce Matcher using OpenCV
+        for string-based descriptors, and Hamming distance for binary descriptors
+        cross_check - for a pair of features to considered valid, f1 needs to match f2 and vice versa
+        '''
+
         if self.__descriptor_type == DescriptorType.SIFT or\
                 self.__descriptor_type == DescriptorType.SURF:
             bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck=cross_check)
@@ -328,10 +444,9 @@ class PanoramaMaker:
             raise Exception("should not get here")
         return bf
 
-    '''
-    The matcher algorithm will give us the best (more similar) set of features from both images
-    '''
     def __match_keypoints(self, features_a, features_b):
+        ''' The matcher algorithm will give us the best (more similar) set of features from both images
+        '''
         cross_check = (self.__matcher_type == MatcherType.BF)
         bf = self.__create_matcher(cross_check)
 
@@ -351,10 +466,9 @@ class PanoramaMaker:
         else:
             raise Exception("shouldn't get here!")
 
-    '''
-    The user may choose his algorithm for features extraction (5 types)
-    '''
     def __choose_descriptor_type(self):
+        ''' The user may choose his algorithm for features extraction (5 types)
+        '''
         if self.__descriptor_type == DescriptorType.ORB:
             return cv2.ORB.create
         elif self.__descriptor_type == DescriptorType.AKAZE:
@@ -386,7 +500,7 @@ class PanoramaMaker:
             return cv2.ORB.create
 
 
-def __warp_cylindrical_to_cartesian(img1, focal_length):
+def _warp_cylindrical_to_cartesian(img1, focal_length):
     """Warp an image from cartesian coordinates (x, y) into cylindrical coordinates (theta, h)
 
     Returns: (image, mask)
@@ -401,14 +515,14 @@ def __warp_cylindrical_to_cartesian(img1, focal_length):
         K = np.array([[f, 0, w/2], [0, f, h/2], [0, 0, 1]]) # mock calibration matrix
         imcyl = cylindricalWarpImage(im, K)
     """
-    im_h, im_w = img1.shape
+    im_h, im_w, _= img1.shape
 
     # go inverse from cylindrical coord to the image
     # (this way there are no gaps)
     cyl = np.zeros_like(img1)
     # np.zeros_like : Return an array of zeros with the same shape and type as a given array
-    cyl_mask = np.zeros_like(img1)
-    cyl_h, cyl_w = cyl.shape                  #check
+    cyl_mask = np.zeros_like(img1, dtype=np.bool)
+    cyl_h, cyl_w, _ = cyl.shape                  #check
     x_c = float(cyl_w) / 2.0
     y_c = float(cyl_h) / 2.0
     x, y = np.meshgrid(np.arange(0,cyl_w), np.arange(0,cyl_h))
@@ -419,17 +533,30 @@ def __warp_cylindrical_to_cartesian(img1, focal_length):
     flat_h = np.reshape(h, (1,-1))
     flat_sin_theta = np.reshape(sin_theta, (1, -1))
     flat_cos_theta = np.reshape(cos_theta, (1, -1))
-    cartesian_coords = np.stack((flat_sin_theta, flat_h, flat_cos_theta), axis=0)
+    cartesian_coords = np.vstack((flat_sin_theta, flat_h, flat_cos_theta))
     K = np.array([[focal_length, 0, cyl_w / 2], [0, focal_length, cyl_h / 2], [0, 0, 1]])
     # calibration matrix
     cyl_coords = np.dot(K, cartesian_coords)
     x_im = cyl_coords[0] / cyl_coords[2]
     y_im = cyl_coords[1] / cyl_coords[2]
-    valid_x_im = x_im[(x_im > 0) & (x_im < im_w)]
-    valid_y_im = y_im[(y_im > 0) & (y_im < im_h)]
-    xy = np.stack((x_im.reshape(img1.shape), y_im.reshape(img1.shape)), axis=2)
+    xy = np.dstack((x_im.reshape(im_h, im_w), y_im.reshape(im_h, im_w)))
     idx_valid_x, idx_valid_y = ( (xy[:, :, 0] > 0) & (xy[:, :, 0] < im_w) &
                                  (xy[:, :, 1] > 0) & (xy[:, :, 1] < im_h) ).nonzero()
-    cyl[idx_valid_x, idx_valid_y] = img1[int(valid_y_im), int(valid_x_im)]
-    cyl_mask[idx_valid_x, idx_valid_y] = 255
+    valid_x_im = xy[idx_valid_x, idx_valid_y][:,0]
+    valid_y_im = xy[idx_valid_x, idx_valid_y][:,1]
+    cyl[idx_valid_x, idx_valid_y] = img1[valid_y_im.astype(int), valid_x_im.astype(int)]
+    cyl_mask[idx_valid_x, idx_valid_y] = True
     return cyl, cyl_mask
+
+
+def _multiply_affine(A, B):
+    FA = np.vstack((A, [0,0,1]))
+    FB = np.vstack((B, [0,0,1]))
+    FAB = FA @ FB
+    return FAB[:-1]
+
+
+def _fill_with_nan_mask(cyl_photo, mask):
+    cyl_photo = cyl_photo.astype(np.float64)
+    cyl_photo[~mask] = np.nan
+    return cyl_photo
