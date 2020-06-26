@@ -123,15 +123,10 @@ class PanoramaMaker:
         A = np.eye(2, 3)
         y_min = 0
         for idx in range(1, len(self.__photos)):
-            A = _multiply_affine( affines[idx-1], A)
+            A = _multiply_affine(A, affines[idx-1])
             y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min)
 
-        print("h")
-        # panorama = self.__warp_and_stitch_homography(self.__homographies[idx - 1], panorama, cyl_photo)
-        # # panorama_gray = cv2.cvtColor(panorama.astype(np.uint8), cv2.COLOR_RGB2GRAY)  # for data extraction
-        # # panorama_kps, panorama_features = self.__detectAndDescribe(panorama_gray)  # getting information on new panorama
-
-        # full cyl panorama
+        panorama = self.__crop_boundaries(panorama)
 
         # return panorama.astype(np.uint8)
 
@@ -223,7 +218,6 @@ class PanoramaMaker:
 
     def __stitch_cylindrical(self, base_photo, add_photo, A, y_min_last=0):
         # we assume the added photo is from the left
-
         p1 = A @ [0, 0, 1]
         p2 = A @ [0, add_photo.shape[0] - 1, 1]
         p3 = A @ [add_photo.shape[1] - 1, add_photo.shape[0] - 1, 1]
@@ -238,23 +232,35 @@ class PanoramaMaker:
         height = int(np.ceil(y_max - y_min))
 
         # the photo will be cut !
-        T = np.eye(2,3)
-        #if y_min < 0:
-        #    T = np.array([[1, 0, 0],
-        #                  [0, 1, -y_min]])
+        T_cut = np.eye(2,3)
+        T_cut_with_last = np.array([[1, 0, 0],
+                                    [0, 1, -y_min_last]])
+        y_min_next = y_min_last
+        # we need to move even more from the last image
+        if y_min - y_min_last < 0:
+            T_cut[1,2] = -(y_min - y_min_last)
+            T_cut_with_last[1,2] = -y_min
+            y_min_next = y_min
 
-        TA = _multiply_affine(T, A)
+        # A[0,0] = 1
+        # A[0,1] = 0
+        # A[1,0] = 0
+        # A[1,1] = 1
+        TA = _multiply_affine(T_cut_with_last, A)
         # needs to translate both the photo and the panorama, so nothing will be cropped
         result = cv2.warpAffine(add_photo, TA, (width, height),
                                 borderValue=(np.nan, np.nan, np.nan))
-        t_base_photo = cv2.warpAffine(base_photo.astype(np.float64), T, (width, height),
+        t_base_photo = cv2.warpAffine(base_photo.astype(np.float64), T_cut, (width, height),
                                     borderValue=(np.nan, np.nan, np.nan))
         # find the new position of the base_photo
         base_photo_pos = ~np.isnan(t_base_photo[:, :, 0])
         result[base_photo_pos] = t_base_photo.astype(np.uint8)[base_photo_pos]
 
+        return y_min_next, result
+
+    def __crop_boundaries(self, crop):
         # transform the panorama image to grayscale and threshold it
-        gray = cv2.cvtColor(result.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(crop.astype(np.uint8), cv2.COLOR_BGR2GRAY)
         thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)[1]
 
         # Finds contours from the binary image
@@ -268,8 +274,7 @@ class PanoramaMaker:
         (x, y, w, h) = cv2.boundingRect(c)
 
         # crop the image to the bbox coordinates
-        result = result[y:y + h, x:x + w]
-        return y_min, result
+        return crop[y:y + h, x:x + w]
 
     def __warp_and_stitch_homography(self, H, add_photo, panorama):
         # check if warped photo is from the left or above the panorama
@@ -406,12 +411,23 @@ class PanoramaMaker:
                 pass
 
             # choose best focal lengths
-            f1 = f1a or f1b
-            if f1a and f1b:
+            f1 = f1a
+            if not np.isnan(f1a) and not np.isnan(f1b):
                 f1 = f1a if np.abs(d1a) > np.abs(d1b) else f1b
-            f0 = f0a or f0b
-            if f0a and f0b:
+            elif np.isnan(f1a):
+                f1 = f1b
+            f0 = f0a
+            if not np.isnan(f0a) and not np.isnan(f0b):
                 f0 = f0a if np.abs(d0a) > np.abs(d0b) else f0b
+            elif np.isnan(f0a):
+                f0 = f0b
+
+            if np.isnan(f0) and np.isnan(f1):
+                f1 = f0 = 0
+            elif np.isnan(f1):
+                f1 = f0
+            elif np.isnan(f0):
+                f0 = f1
             focals.append(np.sqrt(f0*f1))
 
         focals = np.array(focals)[np.array(focals) != 0]
