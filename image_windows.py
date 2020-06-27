@@ -98,6 +98,12 @@ class ImageWindows:
             rows_chunks_num = self.__panorama_h // (self.__input_size_cfg // 2)
             rows_chunks_num += (self.__panorama_h % (self.__input_size_cfg / 2) > dist_boundary)
 
+        # in case the picture is smaller than the cfg size
+        rows_chunks_num += (rows_chunks_num == 0)
+        cols_chunks_num += (cols_chunks_num == 0)
+
+        # adding plus one incase the // had to round down - and so we miss pixels.
+        # we prefer to have a tiny-bit larger windows than to lose pixels
         actual_wind_col_size = (self.__panorama_w // cols_chunks_num) + 1
         actual_wind_row_size = (self.__panorama_h // rows_chunks_num) + 1
 

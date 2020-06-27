@@ -128,7 +128,7 @@ class PanoramaMaker:
 
         panorama = self.__crop_boundaries(panorama)
 
-        # return panorama.astype(np.uint8)
+        return panorama.astype(np.uint8)
 
     def __reorder(self):
         print('[+] Getting photo order...')
@@ -270,11 +270,27 @@ class PanoramaMaker:
         # get the maximum contour area
         c = max(contours, key=cv2.contourArea)
 
-        # get a bbox from the contour area
+        # minimum rotate rectangle
+        # rect = cv2.minAreaRect(c)
+        # src_box = cv2.boxPoints(rect)  # what are his points
+        #
+        # width = int(rect[1][0])
+        # height = int(rect[1][1])
+        #
+        # dst_pts = np.array([[0, height - 1],
+        #                     [0, 0],
+        #                     [width - 1, 0],
+        #                     [width - 1, height - 1]], dtype=np.float32)
+        #
+        # M = cv2.getPerspectiveTransform(src_box, dst_pts)
+        # warped = cv2.warpPerspective(crop, M, (width, height))
+        #
+        # # get a bbox from the contour area
         (x, y, w, h) = cv2.boundingRect(c)
 
         # crop the image to the bbox coordinates
         return crop[y:y + h, x:x + w]
+        # return warped
 
     def __warp_and_stitch_homography(self, H, add_photo, panorama):
         # check if warped photo is from the left or above the panorama
@@ -344,7 +360,9 @@ class PanoramaMaker:
 
             # estimate the homography between the sets of points
             if isAffine:
-                return cv2.estimateAffine2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
+                # return cv2.estimateAffine2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
+                # return cv2.estimateRigidTransform(pts_new, pts_panorama, fullAffine=False)
+                return cv2.estimateAffinePartial2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
             else:
                 return cv2.findHomography(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
         else:
