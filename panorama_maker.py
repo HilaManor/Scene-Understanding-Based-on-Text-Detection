@@ -119,15 +119,24 @@ class PanoramaMaker:
 
         print("[+] Stitching panorama...")
         # we stich from the middle to avoid as much rotation as we can
-        panorama = cyl_photos[0] # middle
+
+        middle_idx = (self.__counter//2)
+        panorama = cyl_photos[middle_idx] # middle
         A = np.eye(2, 3)
         y_min = 0
-        for idx in range(1, len(self.__photos)): #middle to the right
+        x_min = 0
+        for idx in range(middle_idx+1, len(self.__photos)): #middle to the right
             A = _multiply_affine(A, affines[idx-1])
-            y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min)
+            x_min, y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min, x_min)
+
+        for idx in range(middle_idx-1, -1, -1): #middle to the left, last performance is idx = 1
+            inversed_affine = np.linalg.inv(affines[idx])
+            A = _multiply_affine(A, inversed_affine)
+            x_min, y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min, x_min)
+
+
 
         # TODO: from the middle to the left
-        # 1. stitch_cylindrical: understand if the code was generic enough :)
         # 2. correct transformation
         #       a. affines: T_right->T_left
         #           np.linalg.invert()
@@ -223,24 +232,25 @@ class PanoramaMaker:
 
         return affines, cyl_featureKeys, cyl_photos
 
-    def __stitch_cylindrical(self, base_photo, add_photo, A, y_min_last=0):
-        # we assume the added photo is from the left
+    def __stitch_cylindrical(self, base_photo, add_photo, A, y_min_last=0, x_min_last=0):
+        # we assume the added photo is from the right
         p1 = A @ [0, 0, 1]
         p2 = A @ [0, add_photo.shape[0] - 1, 1]
         p3 = A @ [add_photo.shape[1] - 1, add_photo.shape[0] - 1, 1]
         p4 = A @ [add_photo.shape[1] - 1, 0, 1]
 
         # for the panorama's coordinate system - position of image corners after transform
+        x_min = min(p1[0], p2[0], p3[0], p4[0], 0)
         y_min = min(p1[1], p2[1], p3[1], p4[1], 0)
         x_max = max(p1[0], p2[0], p3[0], p4[0], base_photo.shape[1])
         y_max = max(p1[1], p2[1], p3[1], p4[1], base_photo.shape[0])
 
-        width = int(np.ceil(x_max))
+        width = int(np.ceil(x_max - x_min))
         height = int(np.ceil(y_max - y_min))
 
         # the photo will be cut !
         T_cut = np.eye(2,3)
-        T_cut_with_last = np.array([[1, 0, 0],
+        T_cut_with_last = np.array([[1, 0, -x_min_last],
                                     [0, 1, -y_min_last]])
         y_min_next = y_min_last
         # we need to move even more from the last image
@@ -248,6 +258,13 @@ class PanoramaMaker:
             T_cut[1,2] = -(y_min - y_min_last)
             T_cut_with_last[1,2] = -y_min
             y_min_next = y_min
+
+        x_min_next = x_min_last
+        # we need to move even more from the last image
+        if x_min - x_min_last < 0:
+            T_cut[0, 2] = -(x_min - x_min_last)
+            T_cut_with_last[0, 2] = -x_min
+            x_min_next = x_min
 
         # A[0,0] = 1
         # A[0,1] = 0
@@ -270,7 +287,7 @@ class PanoramaMaker:
 
         result[base_photo_pos] = t_base_photo.astype(np.uint8)[base_photo_pos]
 
-        return y_min_next, result
+        return x_min_next, y_min_next, result
 
     def __crop_boundaries(self, crop):
         # transform the panorama image to grayscale and threshold it
