@@ -118,13 +118,20 @@ class PanoramaMaker:
 
 
         print("[+] Stitching panorama...")
-        # we start from the right to avoid drifting upwards
-        panorama = cyl_photos[0]
+        # we stich from the middle to avoid as much rotation as we can
+        panorama = cyl_photos[0] # middle
         A = np.eye(2, 3)
         y_min = 0
-        for idx in range(1, len(self.__photos)):
+        for idx in range(1, len(self.__photos)): #middle to the right
             A = _multiply_affine(A, affines[idx-1])
             y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min)
+
+        # TODO: from the middle to the left
+        # 1. stitch_cylindrical: understand if the code was generic enough :)
+        # 2. correct transformation
+        #       a. affines: T_right->T_left
+        #           np.linalg.invert()
+        #       b. is the multiply ok
 
         panorama = self.__crop_boundaries(panorama)
 
