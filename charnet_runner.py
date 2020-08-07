@@ -33,9 +33,8 @@ class CharNetRunner:
             # update absolute position
             word.word_bbox[::2] = [x_coord + window.pos_x for x_coord in word.word_bbox[::2]]
             word.word_bbox[1::2] = [y_coord + window.pos_y for y_coord in word.word_bbox[1::2]]
-            if not self.__word_is_near_border(old_word_bbox, 50, window_w, window_h):
-                word_abs = word
-            else:
+            word_abs = word
+            if self.__word_is_near_border(old_word_bbox, 50, window_w, window_h):
                 zoom_w = pano_windows.get_window_at_pos(word.word_bbox[0], word.word_bbox[1], 50)
                 z_im, z_scale_w, z_scale_h, z_window_w, z_window_h = self.__resize(zoom_w.im)
                 with torch.no_grad():

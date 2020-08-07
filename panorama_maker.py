@@ -249,18 +249,25 @@ class PanoramaMaker:
         TA = _multiply_affine(T_cut_with_last, A)
         # needs to translate both the photo and the panorama, so nothing will be cropped
         result = cv2.warpAffine(add_photo, TA, (width, height),
-                                borderValue=(np.nan, np.nan, np.nan))
+                                borderValue=(np.nan, np.nan, np.nan), flags=cv2.INTER_CUBIC)
         t_base_photo = cv2.warpAffine(base_photo.astype(np.float64), T_cut, (width, height),
-                                    borderValue=(np.nan, np.nan, np.nan))
+                                    borderValue=(np.nan, np.nan, np.nan), flags=cv2.INTER_CUBIC)
         # find the new position of the base_photo
         base_photo_pos = ~np.isnan(t_base_photo[:, :, 0])
+
+        # clamp out-of-range values
+        result[result[:, :, :] < 0] = 0
+        result[result[:, :, :] > 255] = 255
+        t_base_photo[t_base_photo[:, :, :] < 0] = 0
+        t_base_photo[t_base_photo[:, :, :] > 255] = 255
+
         result[base_photo_pos] = t_base_photo.astype(np.uint8)[base_photo_pos]
 
         return y_min_next, result
 
     def __crop_boundaries(self, crop):
         # transform the panorama image to grayscale and threshold it
-        gray = cv2.cvtColor(crop.astype(np.uint8), cv2.COLOR_BGR2GRAY)
+        gray = cv2.cvtColor(crop.astype(np.uint8), cv2.COLOR_RGB2GRAY)
         thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY)[1]
 
         # Finds contours from the binary image
@@ -270,27 +277,28 @@ class PanoramaMaker:
         # get the maximum contour area
         c = max(contours, key=cv2.contourArea)
 
-        # minimum rotate rectangle
-        # rect = cv2.minAreaRect(c)
-        # src_box = cv2.boxPoints(rect)  # what are his points
-        #
-        # width = int(rect[1][0])
-        # height = int(rect[1][1])
-        #
-        # dst_pts = np.array([[0, height - 1],
-        #                     [0, 0],
-        #                     [width - 1, 0],
-        #                     [width - 1, height - 1]], dtype=np.float32)
-        #
-        # M = cv2.getPerspectiveTransform(src_box, dst_pts)
-        # warped = cv2.warpPerspective(crop, M, (width, height))
-        #
-        # # get a bbox from the contour area
-        (x, y, w, h) = cv2.boundingRect(c)
+        if False:
+            # minimum rotate rectangle
+            rect = cv2.minAreaRect(c)
+            src_box = cv2.boxPoints(rect)  # what are his points
 
-        # crop the image to the bbox coordinates
-        return crop[y:y + h, x:x + w]
-        # return warped
+            width = int(rect[1][0])
+            height = int(rect[1][1])
+
+            dst_pts = np.array([[0, height - 1],
+                                [0, 0],
+                                [width - 1, 0],
+                                [width - 1, height - 1]], dtype=np.float32)
+
+            M = cv2.getPerspectiveTransform(src_box, dst_pts)
+            warped = cv2.warpPerspective(crop, M, (width, height), flags=cv2.INTER_CUBIC)
+            return warped
+        else:
+            # get a bbox from the contour area
+            (x, y, w, h) = cv2.boundingRect(c)
+
+            # crop the image to the bbox coordinates
+            return crop[y:y + h, x:x + w]
 
     def __warp_and_stitch_homography(self, H, add_photo, panorama):
         # check if warped photo is from the left or above the panorama
@@ -360,9 +368,9 @@ class PanoramaMaker:
 
             # estimate the homography between the sets of points
             if isAffine:
-                # return cv2.estimateAffine2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
+                return cv2.estimateAffine2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
                 # return cv2.estimateRigidTransform(pts_new, pts_panorama, fullAffine=False)
-                return cv2.estimateAffinePartial2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
+                # return cv2.estimateAffinePartial2D(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
             else:
                 return cv2.findHomography(pts_new, pts_panorama, cv2.RANSAC, reproj_thresh)
         else:

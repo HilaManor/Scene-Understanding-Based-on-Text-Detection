@@ -9,6 +9,7 @@
 import argparse
 import os
 import cv2
+import numpy as np
 
 from panorama_maker import PanoramaMaker, DescriptorType, MatcherType
 from image_windows import ImageWindows
@@ -16,6 +17,20 @@ from charnet_runner import CharNetRunner
 from matplotlib import use
 use("TkAgg")
 from matplotlib import pyplot as plt
+
+
+def vis(img, word_instances):
+    img_word_ins = img.copy()
+    for word_ins in word_instances:
+        word_bbox = word_ins.word_bbox
+        cv2.polylines(img_word_ins, [word_bbox[:8].reshape((-1, 2)).astype(np.int32)],
+                      True, (0, 255, 0), 2)
+        cv2.putText(
+            img_word_ins,
+            '{}'.format(word_ins.text),
+            (int(word_bbox[0]), int(word_bbox[1])), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1
+        )
+    return img_word_ins
 
 
 def parse_dir(scene_path, output_path, charnet):
@@ -55,6 +70,9 @@ def parse_dir(scene_path, output_path, charnet):
         if new_words_only:
             twords += new_words_only
     print('\r[+] Done Extracting Text')
+    vis_image = vis(panorama, twords)
+    print('\r[+] Printed detecions')
+
 
 
 

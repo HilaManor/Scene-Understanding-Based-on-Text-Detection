@@ -1,5 +1,4 @@
 # Conjunctions
-A
 AM
 AN
 AS
