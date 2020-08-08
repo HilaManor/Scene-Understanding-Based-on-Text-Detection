@@ -129,18 +129,13 @@ class PanoramaMaker:
             A = _multiply_affine(A, affines[idx-1])
             x_min, y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min, x_min)
 
+        A = np.eye(2, 3)
         for idx in range(middle_idx-1, -1, -1): #middle to the left, last performance is idx = 1
-            inversed_affine = np.linalg.inv(affines[idx])
+            padded_inved_mat = np.linalg.inv(np.vstack((affines[idx], [0,0,1])))
+            inversed_affine = padded_inved_mat[:2,]
             A = _multiply_affine(A, inversed_affine)
             x_min, y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min, x_min)
 
-
-
-        # TODO: from the middle to the left
-        # 2. correct transformation
-        #       a. affines: T_right->T_left
-        #           np.linalg.invert()
-        #       b. is the multiply ok
 
         panorama = self.__crop_boundaries(panorama)
 

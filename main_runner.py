@@ -15,6 +15,7 @@ from panorama_maker import PanoramaMaker, DescriptorType, MatcherType
 from image_windows import ImageWindows
 from charnet_runner import CharNetRunner
 from matplotlib import use
+import text_algo
 use("TkAgg")
 from matplotlib import pyplot as plt
 
@@ -73,6 +74,7 @@ def parse_dir(scene_path, output_path, charnet):
     vis_image = vis(panorama, twords)
     print('\r[+] Printed detecions')
 
+    c_twords = text_algo.concat_words(twords)
 
 
 
