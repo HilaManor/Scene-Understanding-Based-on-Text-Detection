@@ -4,6 +4,7 @@ import torch
 import cv2
 from charnet.modeling.model import CharNet
 from charnet.config import cfg
+import numpy as np
 
 class CharNetRunner:
     def __init__(self, config_file):
@@ -81,6 +82,32 @@ class CharNetRunner:
         if bbox[5] > window_h - margin or bbox[7] > window_h - margin:
             return True
         return False
+
+    @staticmethod
+    def clean_duplicate_words(words):
+        clean_words = []
+        state = np.ones(len(words))
+        while state.any():
+            base_idx = state.nonzero()[0][0]
+            for idx in range(len(words)):
+                base_word = words[base_idx]
+                new_word = words[idx]
+
+                # if 2 different words (both still viable) intersect
+                if idx != base_idx and state[idx] and \
+                        CharNetRunner._do_words_intersect(base_word, new_word):
+                    # decide if to keep left/right word
+                    if base_word.text_score > new_word.text_score:
+                        state[idx] = False
+                    else:
+                        state[base_idx] = False
+                        break
+
+            # if all other intersections were less accurate
+            if state[base_idx]:
+                clean_words.append(words[base_idx])
+                state[base_idx] = False
+        return clean_words
 
     @staticmethod
     def new_words_only(base_words, window_words):

@@ -16,6 +16,7 @@ from image_windows import ImageWindows
 from charnet_runner import CharNetRunner
 from matplotlib import use
 import text_algo
+import google_query
 use("TkAgg")
 from matplotlib import pyplot as plt
 
@@ -67,6 +68,7 @@ def parse_dir(scene_path, output_path, charnet):
     for idx, window in enumerate(windows, 1):
         print("[-] Splitting to windows: %d/%d" % (idx, len(windows)), end='\r')
         word_instances = charnet.get_absolute_window_words(windows, window)
+        word_instances = charnet.clean_duplicate_words(word_instances)
         new_words_only = CharNetRunner.new_words_only(twords, word_instances)
         if new_words_only:
             twords += new_words_only
@@ -75,6 +77,8 @@ def parse_dir(scene_path, output_path, charnet):
     print('\r[+] Printed detecions')
 
     c_twords = text_algo.concat_words(twords)
+
+    loc = google_query.search_geolocation(c_twords)
 
 
 
