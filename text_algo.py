@@ -1,34 +1,56 @@
 from charnet.modeling.postprocessing import WordInstance
 import numpy as np
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, LineString
 
 def concat_words(twords):
     """combines close words"""
 
     twords = concat_intersecting_words(twords)
 
+    twords = concat_adjacent_words(twords, horizontal=True)
+    twords = concat_adjacent_words(twords, horizontal=False)
+    return twords
+
+def concat_adjacent_words(twords, horizontal):
     state = np.ones(len(twords), np.bool)
     word_polys = [__create_word_poly(b) for b in twords]
     new_words = []
-
     while state.any():
         base_idx = state.nonzero()[0][0]
         base_poly = __create_word_poly(twords[base_idx])
+
+        # Exterior looks like this:
+        # 3 ----- 2
+        # -       -
+        # 0 ----- 1
+        point_a = base_poly.exterior.coords[3]
+        point_b = base_poly.exterior.coords[2] if horizontal else base_poly.exterior.coords[0]
+
+        angle = np.arctan2(point_b[1] - point_a[1],
+                           point_b[0] - point_a[0])
+
+        line_len = np.sqrt(((point_b[0] - point_a[0]) ** 2) + ((point_b[1] - point_a[1]) ** 2))
+        cont_right_line = LineString([(base_poly.centroid.x, base_poly.centroid.y),
+                                      (base_poly.centroid.x + line_len * np.cos(angle),
+                                       base_poly.centroid.y + line_len * np.sin(angle))])
+        cont_left_line = LineString([(base_poly.centroid.x, base_poly.centroid.y),
+                                     (base_poly.centroid.x + line_len * np.cos(angle + np.pi),
+                                      base_poly.centroid.y + line_len * np.sin(angle + np.pi))])
         changed = False
-        min_dist = 50
+        min_dist = 10000  # ridiculously large number
         closest_idx = None
         for idx in range(len(twords)):
             new_poly = word_polys[idx]
             dist = new_poly.distance(base_poly)
             if base_idx != idx and state[idx] and dist < min_dist and \
-                    abs(base_poly.bounds[0] - new_poly.bounds[0]) > 20:  # same row approx
+                    (new_poly.crosses(cont_right_line) or new_poly.crosses(cont_left_line)):
                 min_dist = dist
                 closest_idx = idx
 
         if closest_idx:
             new_poly = word_polys[closest_idx]
             # if base first
-            if base_poly.bounds[0] < new_poly.bounds[0]:  # or base_poly.bounds[1] < new_poly.bounds[1]:
+            if new_poly.crosses(cont_right_line):
                 new_word = __compund_words(twords[base_idx], twords[closest_idx],
                                            base_poly, new_poly)
             else:  # if base last
@@ -39,10 +61,9 @@ def concat_words(twords):
             state[closest_idx] = False
             changed = True
 
-        if not changed:
-            state[base_idx] = False
-            new_words.append(twords[base_idx])
-
+        # if not changed:
+        state[base_idx] = False
+        new_words.append(twords[base_idx])
     return new_words
 
 

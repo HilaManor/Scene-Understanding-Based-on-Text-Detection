@@ -54,16 +54,7 @@ def parse_dir(scene_path, output_path, charnet):
     # TODO - success rate or something for panorama
     # panorama = im_original
 
-    windows = ImageWindows(panorama, input_size_cfg=1140)
-    # plt.figure()
-    # for idx, window in enumerate(windows, 1):
-    #     if 14 < idx < 36:
-    #         if idx == 25:
-    #             word_instances = charnet.get_absolute_window_words(windows, window)
-    #             print('h')
-    #         plt.subplot(3, 7, idx-14)
-    #         plt.imshow(window)
-    # plt.show()
+    windows = ImageWindows(panorama, input_size_cfg=2280)
     twords = []
     for idx, window in enumerate(windows, 1):
         print("[-] Splitting to windows: %d/%d" % (idx, len(windows)), end='\r')
