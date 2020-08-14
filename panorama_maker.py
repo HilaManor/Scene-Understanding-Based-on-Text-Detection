@@ -84,9 +84,9 @@ class PanoramaMaker:
 
         print("[+] warping photos to cylindrical format...")
         affines, cyl_featureKeys, cyl_photos = self.__make_everything_cylindrical(f)
-
+        #
         # import pickle
-        # fh = open('Horev_reorder.pickle', 'wb')
+        # fh = open('Data\\broadway_final_reorder.pickle', 'wb')
         # kpss = []
         # featursss =[]
         # for i in range(len(cyl_featureKeys)):
@@ -100,7 +100,7 @@ class PanoramaMaker:
         # fh.close()
 
         # import pickle
-        # with open('./Data/Haifa_reorder.pickle', 'rb') as fh:
+        # with open('Data\\FINALS\\borad_final_reorder.pickle', 'rb') as fh:
         #     pickle_arr = pickle.load(fh)
         # affines = pickle_arr[0]
         # featursss = pickle_arr[1]
@@ -115,22 +115,22 @@ class PanoramaMaker:
         #                                     _class_id=point[5])
         #         temp.append(temp_feature)
         #     cyl_featureKeys.append((temp, featursss[i]))
-
-
-        print("[+] Stitching panorama...")
-        # we stich from the middle to avoid as much rotation as we can
+        #
+        #
+        # print("[+] Stitching panorama...")
+        # # we stich from the middle to avoid as much rotation as we can
 
         middle_idx = (self.__counter//2)
-        panorama = cyl_photos[middle_idx] # middle
+        panorama = cyl_photos[middle_idx]  # middle
         A = np.eye(2, 3)
         y_min = 0
         x_min = 0
-        for idx in range(middle_idx+1, len(self.__photos)): #middle to the right
+        for idx in range(middle_idx+1, len(self.__photos)):  #middle to the right
             A = _multiply_affine(A, affines[idx-1])
             x_min, y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min, x_min)
 
         A = np.eye(2, 3)
-        for idx in range(middle_idx-1, -1, -1): #middle to the left, last performance is idx = 1
+        for idx in range(middle_idx-1, -1, -1):  #middle to the left, last performance is idx = 1
             padded_inved_mat = np.linalg.inv(np.vstack((affines[idx], [0,0,1])))
             inversed_affine = padded_inved_mat[:2,]
             A = _multiply_affine(A, inversed_affine)
@@ -270,7 +270,7 @@ class PanoramaMaker:
         result = cv2.warpAffine(add_photo, TA, (width, height),
                                 borderValue=(np.nan, np.nan, np.nan), flags=cv2.INTER_CUBIC)
         t_base_photo = cv2.warpAffine(base_photo.astype(np.float64), T_cut, (width, height),
-                                    borderValue=(np.nan, np.nan, np.nan), flags=cv2.INTER_CUBIC)
+                                      borderValue=(np.nan, np.nan, np.nan), flags=cv2.INTER_CUBIC)
         # find the new position of the base_photo
         base_photo_pos = ~np.isnan(t_base_photo[:, :, 0])
 
@@ -296,28 +296,11 @@ class PanoramaMaker:
         # get the maximum contour area
         c = max(contours, key=cv2.contourArea)
 
-        if False:
-            # minimum rotate rectangle
-            rect = cv2.minAreaRect(c)
-            src_box = cv2.boxPoints(rect)  # what are his points
+        # get a bbox from the contour area
+        (x, y, w, h) = cv2.boundingRect(c)
 
-            width = int(rect[1][0])
-            height = int(rect[1][1])
-
-            dst_pts = np.array([[0, height - 1],
-                                [0, 0],
-                                [width - 1, 0],
-                                [width - 1, height - 1]], dtype=np.float32)
-
-            M = cv2.getPerspectiveTransform(src_box, dst_pts)
-            warped = cv2.warpPerspective(crop, M, (width, height), flags=cv2.INTER_CUBIC)
-            return warped
-        else:
-            # get a bbox from the contour area
-            (x, y, w, h) = cv2.boundingRect(c)
-
-            # crop the image to the bbox coordinates
-            return crop[y:y + h, x:x + w]
+        # crop the image to the bbox coordinates
+        return crop[y:y + h, x:x + w]
 
     def __warp_and_stitch_homography(self, H, add_photo, panorama):
         # check if warped photo is from the left or above the panorama
