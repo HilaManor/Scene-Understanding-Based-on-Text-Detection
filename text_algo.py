@@ -2,6 +2,7 @@ from charnet.modeling.postprocessing import WordInstance
 import numpy as np
 from shapely.geometry import Polygon, LineString
 
+
 def concat_words(twords):
     """combines close words"""
 
@@ -10,6 +11,7 @@ def concat_words(twords):
     twords = concat_adjacent_words(twords, horizontal=True)
     twords = concat_adjacent_words(twords, horizontal=False)
     return twords
+
 
 def concat_adjacent_words(twords, horizontal):
     state = np.ones(len(twords), np.bool)
@@ -21,10 +23,10 @@ def concat_adjacent_words(twords, horizontal):
 
         # Exterior looks like this:
         # 3 ----- 2
-        # -       -
+        # |       |
         # 0 ----- 1
-        point_a = base_poly.exterior.coords[3]
-        point_b = base_poly.exterior.coords[2] if horizontal else base_poly.exterior.coords[0]
+        point_a = base_poly.exterior.coords[0]
+        point_b = base_poly.exterior.coords[1] if horizontal else base_poly.exterior.coords[3]
 
         angle = np.arctan2(point_b[1] - point_a[1],
                            point_b[0] - point_a[0])
@@ -61,9 +63,9 @@ def concat_adjacent_words(twords, horizontal):
             state[closest_idx] = False
             changed = True
 
-        # if not changed:
-        state[base_idx] = False
-        new_words.append(twords[base_idx])
+        if not changed:
+            state[base_idx] = False
+            new_words.append(twords[base_idx])
     return new_words
 
 

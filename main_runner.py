@@ -46,13 +46,14 @@ def parse_dir(scene_path, output_path, charnet):
     for im_name in sorted(os.listdir(scene_path)):
         print("[+] Working on \"%s\"..." % im_name)
         im_file = os.path.join(scene_path, im_name)
-        im_original = cv2.cvtColor(cv2.imread(im_file), cv2.COLOR_BGR2RGB)
+        im_original = cv2.imread(im_file)
         panorama_gen.add_photo(im_original)
 
 
     panorama = panorama_gen.create_panorama()
-    # TODO - success rate or something for panorama
-    # panorama = im_original
+
+    cv2.imwrite('Data\\FINALS\\LA_panorama_final.png', panorama)
+    # panorama = cv2.imread('Data\\FINALS\\broadway_panorama_final.png')
 
     windows = ImageWindows(panorama, input_size_cfg=2280)
     twords = []
@@ -68,7 +69,12 @@ def parse_dir(scene_path, output_path, charnet):
     print('\r[+] Printed detecions')
 
     c_twords = text_algo.concat_words(twords)
-
+    combined_vis_image = vis(panorama, c_twords)
+    cv2.imwrite('Data\\FINALS\\LA_combined.png', combined_vis_image)
+    # with open('Data\\FINALS\\MultCanadaTest.txt', 'a') as f:
+    #     f.write('\t\tTest 1:\n')
+    #     f.writelines([w.text + ' ;; ' for w in c_twords])
+    #     f.write('\n\n')
     loc = google_query.search_geolocation(c_twords)
 
 
