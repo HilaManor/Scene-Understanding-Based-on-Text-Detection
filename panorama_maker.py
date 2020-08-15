@@ -73,17 +73,28 @@ class PanoramaMaker:
     '''
     The Main func - creates the panorama
     '''
-    def create_panorama(self):
-        self.__homographies = self.__reorder()
-        last_matches = self.__match_keypoints(self.__featuresKeys[0][1],
-                                              self.__featuresKeys[-1][1])
-        H_last, status = self.__get_homography(last_matches, self.__featuresKeys[-1][0], self.__featuresKeys[0][0],
-                                               self.__reprojThresh)
+    def create_panorama(self, dont_reorder):
+        self.__homographies = self.__reorder(dont_reorder)
+        # last_matches = self.__match_keypoints(self.__featuresKeys[0][1],
+        #                                       self.__featuresKeys[-1][1])
+        # H_last, status = self.__get_homography(last_matches, self.__featuresKeys[-1][0], self.__featuresKeys[0][0],
+        #                                        self.__reprojThresh)
 
         f = self.__estimate_focal_length()
 
         print("[+] warping photos to cylindrical format...")
         affines, cyl_featureKeys, cyl_photos = self.__make_everything_cylindrical(f)
+        #
+        # with open('Data\\FINALS\\cheking_cyl_features'+str(iiii)+'.txt', 'a') as f:
+        #     for keys, features in cyl_featureKeys:
+        #         for feature in features:
+        #             np.savetxt(f, feature, fmt='%.6f')
+        #         f.write('\n')
+        # with open('Data\\FINALS\\cheking_cyl_affines'+str(iiii)+'.txt', 'a') as f:
+        #     for mat in affines:
+        #         for line in mat:
+        #             np.savetxt(f, line.reshape(1, line.shape[0]), fmt='%.6f')
+        #         f.write('\n')
         #
         # import pickle
         # fh = open('Data\\broadway_final_reorder.pickle', 'wb')
@@ -117,9 +128,11 @@ class PanoramaMaker:
         #     cyl_featureKeys.append((temp, featursss[i]))
         #
         #
-        # print("[+] Stitching panorama...")
-        # # we stich from the middle to avoid as much rotation as we can
 
+
+
+        print("[+] Stitching panorama...")
+        # we stich from the middle to avoid as much rotation as we can
         middle_idx = (self.__counter//2)
         panorama = cyl_photos[middle_idx]  # middle
         A = np.eye(2, 3)
@@ -136,70 +149,83 @@ class PanoramaMaker:
             A = _multiply_affine(A, inversed_affine)
             x_min, y_min, panorama = self.__stitch_cylindrical(panorama, cyl_photos[idx], A, y_min, x_min)
 
-
         panorama = self.__crop_boundaries(panorama)
-
         return panorama.astype(np.uint8)
 
-    def __reorder(self):
+    def __reorder(self, dont_reorder):
         print('[+] Getting photo order...')
-        ordered_photos = [self.__photos[self.__check_first]]
-        ordered_featureKeys = [self.__featuresKeys[self.__check_first]]
+        first_photo = 0 if dont_reorder else self.__check_first
+        ordered_photos = [self.__photos[first_photo]]
+        ordered_featureKeys = [self.__featuresKeys[first_photo]]
         homographies = []
-        del self.__photos[self.__check_first]
-        del self.__featuresKeys[self.__check_first]
+        del self.__photos[first_photo]
+        del self.__featuresKeys[first_photo]
 
         while len(self.__photos):
             print("[*] Connecting %d photos..." % len(self.__photos), end='\r')
-            best_i_r = -1
-            best_i_l = -1
-            H_r = None
-            H_l = None
-            best_match_r = None
-            best_match_l = None
-            # who is the best from the left
-            ignore_l_i = []
-            while best_i_l == -1 and len(ignore_l_i) < len(self.__photos):
-                best_i_l, best_match_l = self.__get_best_match_from_photos(
-                    ordered_featureKeys[0][1], ignore_l_i)
-                H_l, status = self.__get_homography(best_match_l, ordered_featureKeys[0][0],
-                                                    self.__featuresKeys[best_i_l][0], self.__reprojThresh)
-                # not really from the left match
-                if H_l[0, 2] >= 0:
-                    ignore_l_i.append(best_i_l)
-                    best_i_l = -1  # continue to search
+            if dont_reorder:
+                matches = self.__match_keypoints(self.__featuresKeys[0][1],
+                                                 ordered_featureKeys[-1][1])
+                H_r, status = self.__get_homography(matches, ordered_featureKeys[-1][0],
+                                                    self.__featuresKeys[0][0],
+                                                    self.__reprojThresh)
 
-            # who is the best from the right
-            ignore_r_i = []
-            while best_i_r == -1 and len(ignore_r_i) < len(self.__photos):
-                best_i_r, best_match_r = self.__get_best_match_from_photos(ordered_featureKeys[-1][1], ignore_r_i)
-                H_r, status = self.__get_homography(best_match_r, ordered_featureKeys[-1][0],
-                                                    self.__featuresKeys[best_i_r][0], self.__reprojThresh)
-                # not really from the right match
-                if H_r[0, 2] <= 0:
-                    ignore_r_i.append(best_i_r)
-                    best_i_r = -1  # continue to search
-
-            # we found a possible match from the right and possible match from the left.
-            # we shall only choose to keep the better match, to minimize errors (this makes it
-            # possible for a situation where image 5 was match to 123 from the left and 4 was
-            # matched on the right. we hope that the 4 will have more matches, and so 5 will get
-            # stitched correctly to 1234 next iteration
-            if best_i_l != -1 and len(best_match_l) >= len(best_match_r):
-                ordered_photos = [self.__photos[best_i_l]] + ordered_photos
-                ordered_featureKeys = [self.__featuresKeys[best_i_l]] + ordered_featureKeys
-                homographies.append(np.linalg.inv(H_l))
-                del self.__photos[best_i_l]
-                del self.__featuresKeys[best_i_l]
-            elif best_i_r != -1:
-                ordered_photos.append(self.__photos[best_i_r])
-                ordered_featureKeys.append(self.__featuresKeys[best_i_r])
+                ordered_photos.append(self.__photos[0])
+                ordered_featureKeys.append(self.__featuresKeys[0])
                 homographies.append(H_r)
-                del self.__photos[best_i_r]
-                del self.__featuresKeys[best_i_r]
+                del self.__photos[0]
+                del self.__featuresKeys[0]
             else:
-                raise NotImplementedError("Can't connect all photos")
-                # todo: then what? continue to the other photos?
+                best_i_r = -1
+                best_i_l = -1
+                H_r = None
+                H_l = None
+                best_match_r = None
+                best_match_l = None
+                # who is the best from the left
+                ignore_l_i = []
+                while best_i_l == -1 and len(ignore_l_i) < len(self.__photos):
+                    best_i_l, best_match_l = self.__get_best_match_from_photos(
+                        ordered_featureKeys[0][1], ignore_l_i)
+                    H_l, status = self.__get_homography(best_match_l, ordered_featureKeys[0][0],
+                                                        self.__featuresKeys[best_i_l][0], self.__reprojThresh)
+                    # not really from the left match
+                    if H_l[0, 2] >= 0:
+                        ignore_l_i.append(best_i_l)
+                        best_i_l = -1  # continue to search
+
+                # who is the best from the right
+                ignore_r_i = []
+                while best_i_r == -1 and len(ignore_r_i) < len(self.__photos):
+                    best_i_r, best_match_r = self.__get_best_match_from_photos(ordered_featureKeys[-1][1], ignore_r_i)
+                    H_r, status = self.__get_homography(best_match_r, ordered_featureKeys[-1][0],
+                                                        self.__featuresKeys[best_i_r][0], self.__reprojThresh)
+                    # not really from the right match
+                    if H_r[0, 2] <= 0:
+                        ignore_r_i.append(best_i_r)
+                        best_i_r = -1  # continue to search
+
+
+                # we found a possible match from the right and possible match from the left.
+                # we shall only choose to keep the better match, to minimize errors (this makes it
+                # possible for a situation where image 5 was match to 123 from the left and 4 was
+                # matched on the right. we hope that the 4 will have more matches, and so 5 will get
+                # stitched correctly to 1234 next iteration
+                if best_i_l != -1 and len(best_match_l) >= len(best_match_r):
+                    ordered_photos = [self.__photos[best_i_l]] + ordered_photos
+                    ordered_featureKeys = [self.__featuresKeys[best_i_l]] + ordered_featureKeys
+                    homographies.append(np.linalg.inv(H_l))
+                    del self.__photos[best_i_l]
+                    del self.__featuresKeys[best_i_l]
+                elif best_i_r != -1:
+                    ordered_photos.append(self.__photos[best_i_r])
+                    ordered_featureKeys.append(self.__featuresKeys[best_i_r])
+                    homographies.append(H_r)
+                    del self.__photos[best_i_r]
+                    del self.__featuresKeys[best_i_r]
+                else:
+                    raise NotImplementedError("Can't connect all photos")
+                    # todo: then what? continue to the other photos?
         # all photos possible were connected
         self.__photos = ordered_photos
         self.__featuresKeys = ordered_featureKeys

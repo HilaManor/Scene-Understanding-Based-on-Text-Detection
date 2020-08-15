@@ -35,7 +35,7 @@ def vis(img, word_instances):
     return img_word_ins
 
 
-def parse_dir(scene_path, output_path, charnet):
+def parse_dir(scene_path, output_path, charnet, dont_reorder):
     """ Runs the context analysis on the given images of the scene in the given directory
 
     :param scene_path: Directory containing images of the scene. images should overlap
@@ -49,11 +49,10 @@ def parse_dir(scene_path, output_path, charnet):
         im_original = cv2.imread(im_file)
         panorama_gen.add_photo(im_original)
 
+    panorama = panorama_gen.create_panorama(dont_reorder)
 
-    panorama = panorama_gen.create_panorama()
-
-    cv2.imwrite('Data\\FINALS\\LA_panorama_final.png', panorama)
-    # panorama = cv2.imread('Data\\FINALS\\broadway_panorama_final.png')
+    cv2.imwrite('Data\\FINALS\\broadway_panorama_final5.png', panorama)
+    # panorama = cv2.imread('Data\\FINALS\\cheking_random3.png')
 
     windows = ImageWindows(panorama, input_size_cfg=2280)
     twords = []
@@ -64,19 +63,20 @@ def parse_dir(scene_path, output_path, charnet):
         new_words_only = CharNetRunner.new_words_only(twords, word_instances)
         if new_words_only:
             twords += new_words_only
-    print('\r[+] Done Extracting Text')
+    print('\n[+] Done Extracting Text')
     vis_image = vis(panorama, twords)
     print('\r[+] Printed detecions')
 
     c_twords = text_algo.concat_words(twords)
     combined_vis_image = vis(panorama, c_twords)
-    cv2.imwrite('Data\\FINALS\\LA_combined.png', combined_vis_image)
-    # with open('Data\\FINALS\\MultCanadaTest.txt', 'a') as f:
+    cv2.imwrite('Data\\FINALS\\broadway_vis_whereAreWeNow5.png', combined_vis_image)
+    # with open('Data\\FINALS\\RandomCheck.txt', 'a') as f:
     #     f.write('\t\tTest 1:\n')
     #     f.writelines([w.text + ' ;; ' for w in c_twords])
     #     f.write('\n\n')
-    loc = google_query.search_geolocation(c_twords)
 
+    exit(3)
+    loc = google_query.search_geolocation(c_twords)
 
 
 if __name__ == '__main__':
@@ -92,6 +92,9 @@ if __name__ == '__main__':
     parser.add_argument("--results_dir", type=str,
                         help="Results directory. "
                              "Default is to throw the output inside given input directory")
+    parser.add_argument("--dont_reorder", action='store_true', help="Photos are with meaningful "
+                                                                    "name, according to their "
+                                                                    "order left to right")
 
     text_net_group = parser.add_argument_group('Text Recognition Network',
                                                'arguments related to the text '
@@ -114,8 +117,8 @@ if __name__ == '__main__':
             curr_scene_path = os.path.join(args.scenes_dir, scene)
             curr_output_dir = os.path.join(args.results_dir, scene)
             os.makedirs(curr_output_dir, exist_ok=True)
-            parse_dir(curr_scene_path, curr_output_dir, charnet)
+            parse_dir(curr_scene_path, curr_output_dir, charnet, args.dont_reorder)
     else:
         if not args.results_dir:
             args.results_dir = args.single_scene
-        parse_dir(args.single_scene, args.results_dir, charnet)
+        parse_dir(args.single_scene, args.results_dir, charnet, args.dont_reorder)
