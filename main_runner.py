@@ -73,14 +73,14 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
 
     c_twords = text_algo.concat_words(twords)
     combined_vis_image = vis(panorama, c_twords)
-    cv2.imwrite('Data\\FINALS\\broadway_vis_whereAreWeNow5.png', combined_vis_image)
+    #cv2.imwrite('Data\\FINALS\\broadway_vis_whereAreWeNow5.png', combined_vis_image)
     # with open('Data\\FINALS\\RandomCheck.txt', 'a') as f:
     #     f.write('\t\tTest 1:\n')
     #     f.writelines([w.text + ' ;; ' for w in c_twords])
     #     f.write('\n\n')
 
 
-    text_algo.analyze_extracted_words(c_twords)
+    text_algo.analyze_extracted_words(c_twords, panorama)
     exit(3)
     loc = google_query.search_geolocation(c_twords)
 
