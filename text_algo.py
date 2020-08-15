@@ -1,6 +1,7 @@
 from charnet.modeling.postprocessing import WordInstance
 import numpy as np
 from shapely.geometry import Polygon, LineString
+from shapely.affinity import scale
 from fuzzywuzzy import process
 
 
@@ -8,7 +9,6 @@ def concat_words(twords):
     """combines close words"""
 
     twords = __concat_intersecting_words(twords)
-
     twords = __concat_adjacent_words(twords, horizontal=True)
     twords = __concat_adjacent_words(twords, horizontal=False)
     return twords
@@ -26,13 +26,7 @@ def __concat_adjacent_words(twords, horizontal):
         # 3 ----- 2
         # |       |
         # 0 ----- 1
-        point_a = base_poly.exterior.coords[0]
-        point_b = base_poly.exterior.coords[1] if horizontal else base_poly.exterior.coords[3]
-
-        angle = np.arctan2(point_b[1] - point_a[1],
-                           point_b[0] - point_a[0])
-
-        line_len = np.sqrt(((point_b[0] - point_a[0]) ** 2) + ((point_b[1] - point_a[1]) ** 2))
+        angle, line_len = __get_rect_properties(base_poly, horizontal)
         cont_right_line = LineString([(base_poly.centroid.x, base_poly.centroid.y),
                                       (base_poly.centroid.x + line_len * np.cos(angle),
                                        base_poly.centroid.y + line_len * np.sin(angle))])
@@ -70,6 +64,19 @@ def __concat_adjacent_words(twords, horizontal):
     return new_words
 
 
+def __get_rect_properties(base_poly, horizontal):
+    # Exterior looks like this:
+    # 3 ----- 2
+    # |       |
+    # 0 ----- 1
+    point_a = base_poly.exterior.coords[0]
+    point_b = base_poly.exterior.coords[1] if horizontal else base_poly.exterior.coords[3]
+    angle = np.arctan2(point_b[1] - point_a[1],
+                       point_b[0] - point_a[0])
+    line_len = np.sqrt(((point_b[0] - point_a[0]) ** 2) + ((point_b[1] - point_a[1]) ** 2))
+    return angle, line_len
+
+
 def __concat_intersecting_words(twords):
     state = np.ones(len(twords), np.bool)
     word_polys = [__create_word_poly(b) for b in twords]
@@ -100,14 +107,14 @@ def __concat_intersecting_words(twords):
     return new_words
 
 
-def __compund_words(first_t, last_t, first_p, last_p):
+def __compund_words(first_t, last_t, first_p, last_p, amprecent=False):
     new_bboxes = first_p.union(
         last_p).minimum_rotated_rectangle.exterior.coords[:-1]
     new_bboxes = np.round(np.array(sum(new_bboxes, ()), dtype=np.float32))
 
     new_char_scores = np.vstack((first_t.char_scores,
                                  last_t.char_scores))
-    new_text = first_t.text + " " + last_t.text
+    new_text = first_t.text + (" & " if amprecent else " ") + last_t.text
 
     new_word = WordInstance(
         new_bboxes,
@@ -118,14 +125,16 @@ def __compund_words(first_t, last_t, first_p, last_p):
     )
     return new_word
 
+
 def __create_word_poly(b):
     return Polygon([(b.word_bbox[0], b.word_bbox[1]), (b.word_bbox[2], b.word_bbox[3]),
              (b.word_bbox[4], b.word_bbox[5]), (b.word_bbox[6], b.word_bbox[7])])
 
 
 def analyze_extracted_words(twords):
-    less_twords = __remove_duplicates(twords, cut_off=90)
-    streets, others = __split_streets(less_twords)
+    #less_twords = __remove_duplicates(twords, cut_off=90)
+    # remove above 4 words?
+    streets, others = __split_streets(twords)
     streets = __search_junctions(streets)
     others = __filter_others(others, cutoff_score=0.92)
     return streets, others
@@ -161,9 +170,39 @@ def __split_streets(twords):
     return twords, twords
 
 
-def __search_junctions(streets):
+def __search_junctions(streets, max_junctions=5):
     # find street junctions "regent st *&* barlet street"
-    return streets
+
+    state = np.ones(len(streets), np.bool)
+    word_polys = [__create_word_poly(b) for b in streets]
+    combined_words = []
+
+    current_junction = 0
+    while state.any():
+        base_idx = state.nonzero()[0][0]
+        base_poly = __create_word_poly(streets[base_idx])
+        base_poly_dialted = scale(base_poly, 3, 3)
+
+        changed = False
+        min_dist = 10000  # ridiculously large number
+        closest_idx = None
+        for idx in range(len(streets)):
+            new_poly = word_polys[idx]
+            if base_idx != idx and state[idx] and base_poly_dialted.intersects(new_poly) and \
+                    current_junction < max_junctions:
+                new_word = __compund_words(streets[base_idx], streets[idx],
+                                           base_poly, new_poly, amprecent=True)
+                streets[base_idx] = new_word
+                state[idx] = False
+                current_junction += 1
+                changed = True
+                break
+
+        if not changed:
+            state[base_idx] = False
+            current_junction = 0
+            combined_words.append(streets[base_idx])
+    return combined_words
 
 
 def __filter_others(others, cutoff_score=0.92):
@@ -176,3 +215,7 @@ def __filter_others(others, cutoff_score=0.92):
         :return: a list of filtered WordInstances
     """
     return [b for b in others if b.text_score >= cutoff_score]
+
+
+
+# plt.plot(*p.exterior.xy)
