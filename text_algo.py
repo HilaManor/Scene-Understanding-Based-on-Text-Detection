@@ -1,6 +1,7 @@
 from charnet.modeling.postprocessing import WordInstance
 import numpy as np
 from shapely.geometry import Polygon, LineString
+from fuzzywuzzy import process
 
 
 def concat_words(twords):
@@ -123,25 +124,41 @@ def __create_word_poly(b):
 
 
 def analyze_extracted_words(twords):
-    twords = __remove_duplicates(twords)
-    streets, others = __split_streets(twords)
+    less_twords = __remove_duplicates(twords, cut_off=90)
+    streets, others = __split_streets(less_twords)
     streets = __search_junctions(streets)
-    others = __filter_others(others)
+    others = __filter_others(others, cutoff_score=0.92)
     return streets, others
 
 
-def __remove_duplicates(twords):
+def __remove_duplicates(twords, cut_off=90):
+    """remove duplicated words that were found partially or fully, based on levinstein distance
+
+        :param twords: a list of WordInstances to filter
+        :param cut_off: score below which the words will deemed "unsimilar" and won't be removed
+        :return: a list of filtered WordInstances
+    """
     # remove_duplicates and half_duplicates
     s_wrds = sorted(twords, key=lambda x: len(x.text), reverse=True)
+    extracted_words = []
+    while len(s_wrds):
+        comp = s_wrds[0]
+        choices = s_wrds[1:]
+        similar_words = process.extractBests(comp, choices, processor=lambda x: x.text,
+                                             limit=len(choices), score_cutoff=cut_off)
+        extracted_words.append(comp)
+        s_wrds.remove(comp)
+        for sim in similar_words:
+            s_wrds.remove(sim[0])
 
-    return twords
+    return extracted_words
 
 
 def __split_streets(twords):
     # find street names and define them as such
     # (hue)
     # "street"
-    return twords
+    return twords, twords
 
 
 def __search_junctions(streets):
@@ -149,6 +166,13 @@ def __search_junctions(streets):
     return streets
 
 
-def __filter_others(others):
-    # from not-street, keep only those with high certainty
-    return others
+def __filter_others(others, cutoff_score=0.92):
+    """apply filtering for words that weren't identified as streets.
+
+        Currently uses naive cutoff scoring.
+
+        :param others: a list of WordInstances to filter
+        :param cutoff_score: the cutoff score below which the words will be deducted
+        :return: a list of filtered WordInstances
+    """
+    return [b for b in others if b.text_score >= cutoff_score]
