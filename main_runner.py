@@ -79,6 +79,8 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     #     f.writelines([w.text + ' ;; ' for w in c_twords])
     #     f.write('\n\n')
 
+
+    text_algo.analyze_extracted_words(c_twords)
     exit(3)
     loc = google_query.search_geolocation(c_twords)
 

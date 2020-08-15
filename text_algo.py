@@ -6,14 +6,14 @@ from shapely.geometry import Polygon, LineString
 def concat_words(twords):
     """combines close words"""
 
-    twords = concat_intersecting_words(twords)
+    twords = __concat_intersecting_words(twords)
 
-    twords = concat_adjacent_words(twords, horizontal=True)
-    twords = concat_adjacent_words(twords, horizontal=False)
+    twords = __concat_adjacent_words(twords, horizontal=True)
+    twords = __concat_adjacent_words(twords, horizontal=False)
     return twords
 
 
-def concat_adjacent_words(twords, horizontal):
+def __concat_adjacent_words(twords, horizontal):
     state = np.ones(len(twords), np.bool)
     word_polys = [__create_word_poly(b) for b in twords]
     new_words = []
@@ -69,7 +69,7 @@ def concat_adjacent_words(twords, horizontal):
     return new_words
 
 
-def concat_intersecting_words(twords):
+def __concat_intersecting_words(twords):
     state = np.ones(len(twords), np.bool)
     word_polys = [__create_word_poly(b) for b in twords]
     new_words = []
@@ -120,3 +120,35 @@ def __compund_words(first_t, last_t, first_p, last_p):
 def __create_word_poly(b):
     return Polygon([(b.word_bbox[0], b.word_bbox[1]), (b.word_bbox[2], b.word_bbox[3]),
              (b.word_bbox[4], b.word_bbox[5]), (b.word_bbox[6], b.word_bbox[7])])
+
+
+def analyze_extracted_words(twords):
+    twords = __remove_duplicates(twords)
+    streets, others = __split_streets(twords)
+    streets = __search_junctions(streets)
+    others = __filter_others(others)
+    return streets, others
+
+
+def __remove_duplicates(twords):
+    # remove_duplicates and half_duplicates
+    s_wrds = sorted(twords, key=lambda x: len(x.text), reverse=True)
+
+    return twords
+
+
+def __split_streets(twords):
+    # find street names and define them as such
+    # (hue)
+    # "street"
+    return twords
+
+
+def __search_junctions(streets):
+    # find street junctions "regent st *&* barlet street"
+    return streets
+
+
+def __filter_others(others):
+    # from not-street, keep only those with high certainty
+    return others
