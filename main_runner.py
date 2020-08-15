@@ -13,7 +13,7 @@ import numpy as np
 
 from panorama_maker import PanoramaMaker, DescriptorType, MatcherType
 from image_windows import ImageWindows
-from charnet_runner import CharNetRunner
+# from charnet_runner import CharNetRunner
 from matplotlib import use
 import text_algo
 import google_query
@@ -52,9 +52,9 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     # panorama = panorama_gen.create_panorama(dont_reorder)
     #
     # cv2.imwrite('Data\\FINALS\\broadway_panorama_final5.png', panorama)
-    panorama = cv2.imread('Data\\FINALS\\broadway_panorama_final1.png')
+    panorama = cv2.imread(r"C:\Users\user\Desktop\broadway_panorama_final1\broadway_panorama_final1.png")
 
-    # windows = ImageWindows(panorama, input_size_cfg=1280)
+    # windows = ImageWindows(panorama, input_size_cfg=2280)
     # twords = []
     # for idx, window in enumerate(windows, 1):
     #     print("[-] Splitting to windows: %d/%d" % (idx, len(windows)), end='\r')
@@ -66,7 +66,6 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     # print('\n[+] Done Extracting Text')
     # vis_image = vis(panorama, twords)
     # print('\r[+] Printed detecions')
-    #
 
     with open("words.pickle", 'rb') as f:
         import pickle
@@ -80,7 +79,7 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     #     f.write('\n\n')
 
 
-    text_algo.analyze_extracted_words(c_twords)
+    text_algo.analyze_extracted_words(c_twords, panorama)
     exit(3)
     loc = google_query.search_geolocation(c_twords)
 
@@ -110,7 +109,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    charnet = CharNetRunner(args.config_file)
+    # charnet = CharNetRunner(args.config_file)
+    charnet = None
 
     if args.results_dir:
         os.makedirs(args.results_dir, exist_ok=True)

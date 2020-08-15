@@ -1,5 +1,8 @@
 from charnet.modeling.postprocessing import WordInstance
 import numpy as np
+import re
+import cv2
+from pylab import *
 from shapely.geometry import Polygon, LineString
 from shapely.affinity import scale
 from fuzzywuzzy import process
@@ -131,10 +134,10 @@ def __create_word_poly(b):
              (b.word_bbox[4], b.word_bbox[5]), (b.word_bbox[6], b.word_bbox[7])])
 
 
-def analyze_extracted_words(twords):
-    #less_twords = __remove_duplicates(twords, cut_off=90)
-    # remove above 4 words?
-    streets, others = __split_streets(twords)
+def analyze_extracted_words(twords, panorama):
+    # less_twords = __remove_duplicates(twords, cut_off=90)
+    # TODO remove above 4 words?
+    streets, others = __split_streets(twords, panorama)
     streets = __search_junctions(streets)
     others = __filter_others(others, cutoff_score=0.92)
     return streets, others
@@ -159,11 +162,43 @@ def __remove_duplicates(twords, cut_off=90):
         s_wrds.remove(comp)
         for sim in similar_words:
             s_wrds.remove(sim[0])
-
     return extracted_words
 
 
-def __split_streets(twords):
+def __split_streets(twords, panorama):
+    length = len(twords)
+    streets_signs = []
+    other_signs = []
+    for word in twords:
+        check_word = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
+                                word.text, re.IGNORECASE)
+        if check_word:
+            # Found a street sign
+            streets_signs.append(word)
+        else:
+            # Maybe not a street sign
+            mask = np.zeros((panorama.shape[0], panorama.shape[1]), dtype=np.bool)
+            poly = np.array(word.word_bbox).reshape((1, 4, 2))
+            cv2.fillPoly(mask, poly, True)
+            bins = 16
+            range = (0, 255)
+            hsv_img = cv2.cvtColor(panorama, cv2.COLOR_BGR2HSV)
+            hue_img = hsv_img[:, :, 0]
+            saturation_img = hsv_img[:, :, 1]
+            value_img = hsv_img[:, :, 2]
+            hist(hue_img[mask], bins=bins, range=range)
+            hist(saturation_img[mask], bins=bins, range=range)
+            hist(value_img[mask], bins=bins, range=range)
+
+
+            other_signs.append(word)
+
+    #Needs to check if there are more street signs via the histograms
+
+
+
+
+
     # find street names and define them as such
     # (hue)
     # "street"
