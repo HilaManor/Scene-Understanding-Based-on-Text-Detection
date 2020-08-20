@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
 
-from skimage import data
-from skimage.color import rgb2hsv
 import matplotlib
 import cv2
 import matplotlib.pyplot as plt

@@ -15,6 +15,7 @@ from panorama_maker import PanoramaMaker, DescriptorType, MatcherType
 from image_windows import ImageWindows
 # from charnet_runner import CharNetRunner
 from matplotlib import use
+import box_algo
 import text_algo
 import google_query
 use("TkAgg")
@@ -52,7 +53,7 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     # panorama = panorama_gen.create_panorama(dont_reorder)
     #
     # cv2.imwrite('Data\\FINALS\\broadway_panorama_final5.png', panorama)
-    panorama = cv2.imread(r"C:\Users\user\Desktop\broadway_panorama_final1\broadway_panorama_final1.png")
+    panorama = cv2.imread(r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\broadway_panorama_final1.png")
 
     # windows = ImageWindows(panorama, input_size_cfg=2280)
     # twords = []
@@ -70,6 +71,9 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     with open("words.pickle", 'rb') as f:
         import pickle
         twords = pickle.load(f)
+
+    ewords = box_algo.expand_word_data(twords, panorama)
+
     c_twords = text_algo.concat_words(twords)
     # combined_vis_image = vis(panorama, c_twords)
     # cv2.imwrite('Data\\FINALS\\broadway_vis_whereAreWeNow5.png', combined_vis_image)
