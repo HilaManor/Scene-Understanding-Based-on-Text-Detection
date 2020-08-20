@@ -23,13 +23,18 @@ class BoxInstance:
 
 
 def expand_word_data(twords, panorama):
+    print('[+] Loading street names...')
+    with open(r'.\Data\StreetNamesVocab.txt', 'r') as streets_f:
+        street_names = [street.upper().strip('\r\n') for street in streets_f.readlines()]
     boxes = []
 
+    print('[+] Gathering words data...')
     for word in twords:
         hue_mean, hue_std, sat_mean, sat_std, val_mean, val_std = __extract_color_stats(panorama,
                                                                                         word)
+        is_in_streets_list = __check_in_street_list(word.text, street_names)
         box = BoxInstance(word, hue_mean, hue_std, sat_mean, sat_std, val_mean, val_std,
-                          is_in_streets_list=False)
+                          is_in_streets_list)
         boxes.append(box)
     return boxes
 
@@ -47,3 +52,7 @@ def __extract_color_stats(panorama, word):
     sat_mean, sat_std = norm.fit(saturation_img[mask])
     val_mean, val_std = norm.fit(value_img[mask])
     return hue_mean, hue_std, sat_mean, sat_std, val_mean, val_std
+
+
+def __check_in_street_list(word, street_names):
+    return word in street_names

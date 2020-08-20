@@ -72,16 +72,10 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
         import pickle
         twords = pickle.load(f)
 
-    ewords = box_algo.expand_word_data(twords, panorama)
+    tboxes = box_algo.expand_word_data(twords, panorama)
 
-    c_twords = text_algo.concat_words(twords)
+    c_twords = text_algo.concat_words(tboxes)
     # combined_vis_image = vis(panorama, c_twords)
-    # cv2.imwrite('Data\\FINALS\\broadway_vis_whereAreWeNow5.png', combined_vis_image)
-    # with open('Data\\FINALS\\RandomCheck.txt', 'a') as f:
-    #     f.write('\t\tTest 1:\n')
-    #     f.writelines([w.text + ' ;; ' for w in c_twords])
-    #     f.write('\n\n')
-
 
     text_algo.analyze_extracted_words(c_twords, panorama)
     exit(3)
