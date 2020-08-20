@@ -1,7 +1,6 @@
 import numpy as np
 import cv2
 from scipy.stats import norm
-from charnet.modeling.postprocessing import WordInstance
 
 
 class BoxInstance:
@@ -40,15 +39,10 @@ def __extract_color_stats(panorama, word):
     poly = np.array(word.word_bbox, dtype=np.int32).reshape((1, 4, 2))
     cv2.fillPoly(mask, poly, 255)
     mask = mask.astype(np.bool)
-    # bins = 16
-    # range = (0, 255)
     hsv_img = cv2.cvtColor(panorama, cv2.COLOR_BGR2HSV)
     hue_img = hsv_img[:, :, 0]
     saturation_img = hsv_img[:, :, 1]
     value_img = hsv_img[:, :, 2]
-    # hist(hue_img[mask], bins=bins, range=range)
-    # hist(saturation_img[mask], bins=bins, range=range)
-    # hist(value_img[mask], bins=bins, range=range)
     hue_mean, hue_std = norm.fit(hue_img[mask])
     sat_mean, sat_std = norm.fit(saturation_img[mask])
     val_mean, val_std = norm.fit(value_img[mask])
