@@ -10,7 +10,6 @@ import argparse
 import os
 import cv2
 import numpy as np
-
 from panorama_maker import PanoramaMaker, DescriptorType, MatcherType
 from image_windows import ImageWindows
 # from charnet_runner import CharNetRunner
@@ -19,7 +18,6 @@ import box_algo
 import text_algo
 import google_query
 use("TkAgg")
-from matplotlib import pyplot as plt
 
 
 def vis(img, instances):
@@ -69,7 +67,7 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     # vis_image = vis(panorama, twords)
     # print('\r[+] Printed detecions')
 
-    with open("words.pickle", 'wb') as f:
+    with open("words.pickle", 'rb') as f:
         import pickle
         # pickle.dump(twords, f)
         twords = pickle.load(f)

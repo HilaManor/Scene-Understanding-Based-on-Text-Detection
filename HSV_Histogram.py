@@ -1,11 +1,7 @@
 import matplotlib.pyplot as plt
-
-import matplotlib
 import cv2
-import matplotlib.pyplot as plt
 from pylab import *
 import os
-from PIL import Image
 
 
 def convert_hsv_histogram(street_sign):
@@ -31,27 +27,14 @@ def convert_hsv_histogram(street_sign):
     plt.subplot(2, 2, 4)
     imshow(rgb_img)
     title('RGB_img')
-    plt.savefig(os.path.join(r"C:\Users\user\Desktop\output_street_signs_fixed_range",
+    plt.savefig(os.path.join(r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\bhistsoutput",
                              os.path.basename(street_sign)))
     plt.show()
 
 
-
-
-    #fig, (ax0, ax1) = plt.subplots(ncols=2, figsize=(8, 3))
-    #ax0.hist(hue_img.ravel(), 512)
-    #ax0.set_title("Histogram of the Hue channel")
-    #ax1.imshow(hue_img)
-    #ax1.set_title("Hue image")
-    #ax1.axis('off')
-    #fig.tight_layout()
-    #plt.show()
-
-    pass
-
 if __name__ == '__main__':
     plt.close('all')
-    dir = r"C:\Users\user\Desktop\FINALS"
+    dir = r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\broadway_hists"
     for file in os.listdir(dir):
         path = os.path.join(dir, file)
         convert_hsv_histogram(path)

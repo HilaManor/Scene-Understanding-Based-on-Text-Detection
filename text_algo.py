@@ -20,12 +20,12 @@ def __concat_adjacent_words(tboxes, horizontal):
     new_bboxes = []
     while state.any():
         base_idx = state.nonzero()[0][0]
-        center = (tboxes[base_idx].geometrics.polygon.centroid.x,
-                  tboxes[base_idx].geometrics.polygon.centroid.y)
-        line_len = tboxes[base_idx].geometrics.horiz_len if horizontal \
-            else tboxes[base_idx].geometrics.vert_len
-        angle = tboxes[base_idx].geometrics.horiz_angle if horizontal \
-            else tboxes[base_idx].geometrics.vert_angle
+        center = (tboxes[base_idx].geometric.polygon.centroid.x,
+                  tboxes[base_idx].geometric.polygon.centroid.y)
+        line_len = tboxes[base_idx].geometric.horiz_len if horizontal \
+            else tboxes[base_idx].geometric.vert_len
+        angle = tboxes[base_idx].geometric.horiz_angle if horizontal \
+            else tboxes[base_idx].geometric.vert_angle
         cont_right_line = LineString([(center[0], center[1]),
                                       (center[0] + line_len * np.cos(angle),
                                        center[1] + line_len * np.sin(angle))])
@@ -36,15 +36,16 @@ def __concat_adjacent_words(tboxes, horizontal):
         min_dist = 10000  # ridiculously large number
         closest_idx = None
         for idx in range(len(tboxes)):
-            new_poly = tboxes[idx].geometrics.polygon
-            dist = new_poly.distance(tboxes[base_idx].geometrics.polygon)
+            new_poly = tboxes[idx].geometric.polygon
+            dist = new_poly.distance(tboxes[base_idx].geometric.polygon)
             if base_idx != idx and state[idx] and dist < min_dist and \
-                    (new_poly.crosses(cont_right_line) or new_poly.crosses(cont_left_line)):
+                _can_be_same_sign(tboxes[base_idx], tboxes[idx],
+                                  cont_right_line, cont_left_line):
                 min_dist = dist
                 closest_idx = idx
 
         if closest_idx:
-            new_poly = tboxes[closest_idx].geometrics.polygon
+            new_poly = tboxes[closest_idx].geometric.polygon
             # if base first
             if new_poly.crosses(cont_right_line):
                 new_bbox = box_algo.compund_bboxes(tboxes[base_idx], tboxes[closest_idx])
@@ -60,36 +61,33 @@ def __concat_adjacent_words(tboxes, horizontal):
             new_bboxes.append(tboxes[base_idx])
     return new_bboxes
 
+def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=0.1,
+                      color_diff=10):
+    cross_check = box_b.geometric.polygon.crosses(cont_right_line) or \
+                  box_b.geometric.polygon.crosses(cont_left_line)
 
-# def __concat_intersecting_words(twords):
-#     state = np.ones(len(twords), np.bool)
-#     new_words = []
-#     while state.any():
-#         base_idx = state.nonzero()[0][0]
-#         base_poly = __create_word_poly(twords[base_idx])
-#         changed = False
-#         for idx in range(len(twords)):
-#             new_poly = word_polys[idx]
-#             if base_idx != idx and state[idx] and base_poly.intersects(new_poly):
-#                 # if base first
-#                 if base_poly.bounds[0] < new_poly.bounds[0]:  # or base_poly.bounds[1] < new_poly.bounds[1]:
-#                     new_word = __compund_words(twords[base_idx], twords[idx], base_poly, new_poly)
-#                 else:  # if base last
-#                     new_word = __compund_words(twords[idx], twords[base_idx], new_poly, base_poly)
-#
-#                 twords[base_idx] = new_word
-#                 state[idx] = False
-#                 changed = True
-#                 break
-#
-#         if not changed:
-#             state[base_idx] = False
-#             new_words.append(twords[base_idx])
+    angle_check = abs(box_b.geometric.horiz_angle - box_a.geometric.horiz_angle) < angle_diff and \
+                  abs(box_b.geometric.vert_angle - box_a.geometric.vert_angle) < angle_diff
 
+    if cross_check:
+        # from scipy import stats
+        # st,pt = stats.ttest_ind(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0])
+        # sf,pf = stats.ttest_ind(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0],
+        #                         equal_var=False)
+        # print("for words: %s, %s we got\n"
+        #       "\tTRUE -> p=%.2f\n\tFALSE -> p=%.2f" % (box_a.word.text, box_b.word.text, pt*100, pf*100))
+        color_check = box_a.color_stats.hue_mean - box_a.color_stats.hue
+        # print("")
 
-    return new_words
+    return cross_check and angle_check # and color_check
 
-
+# hue_mean = hue_mean
+#         self.hue_std = hue_std
+#         self.sat_mean = sat_mean
+#         self.sat_std = sat_std
+#         self.val_mean = val_mean
+#         self.val_std = val_std
+#         self.color_data = (hues, sats, vals)
 
 
 def analyze_extracted_words(twords, panorama):
@@ -208,3 +206,30 @@ def __filter_others(others, cutoff_score=0.92):
 #             current_junction = 0
 #             combined_words.append(streets[base_idx])
 #     return combined_words
+
+
+# def __concat_intersecting_words(twords):
+#     state = np.ones(len(twords), np.bool)
+#     new_words = []
+#     while state.any():
+#         base_idx = state.nonzero()[0][0]
+#         base_poly = __create_word_poly(twords[base_idx])
+#         changed = False
+#         for idx in range(len(twords)):
+#             new_poly = word_polys[idx]
+#             if base_idx != idx and state[idx] and base_poly.intersects(new_poly):
+#                 # if base first
+#                 if base_poly.bounds[0] < new_poly.bounds[0]:  # or base_poly.bounds[1] < new_poly.bounds[1]:
+#                     new_word = __compund_words(twords[base_idx], twords[idx], base_poly, new_poly)
+#                 else:  # if base last
+#                     new_word = __compund_words(twords[idx], twords[base_idx], new_poly, base_poly)
+#
+#                 twords[base_idx] = new_word
+#                 state[idx] = False
+#                 changed = True
+#                 break
+#
+#         if not changed:
+#             state[base_idx] = False
+#             new_words.append(twords[base_idx])
+#     return new_words
