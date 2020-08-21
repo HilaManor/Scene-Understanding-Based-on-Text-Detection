@@ -22,9 +22,10 @@ use("TkAgg")
 from matplotlib import pyplot as plt
 
 
-def vis(img, word_instances):
+def vis(img, instances):
     img_word_ins = img.copy()
-    for word_ins in word_instances:
+    for ins in instances:
+        word_ins = ins.word if type(instances[0]) == box_algo.BoxInstance else ins
         word_bbox = word_ins.word_bbox
         cv2.polylines(img_word_ins, [word_bbox[:8].reshape((-1, 2)).astype(np.int32)],
                       True, (0, 255, 0), 2)
@@ -68,14 +69,15 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     # vis_image = vis(panorama, twords)
     # print('\r[+] Printed detecions')
 
-    with open("words.pickle", 'rb') as f:
+    with open("words.pickle", 'wb') as f:
         import pickle
+        # pickle.dump(twords, f)
         twords = pickle.load(f)
 
     tboxes = box_algo.expand_word_data(twords, panorama)
 
     c_twords = text_algo.concat_words(tboxes)
-    # combined_vis_image = vis(panorama, c_twords)
+    combined_vis_image = vis(panorama, c_twords)
 
     text_algo.analyze_extracted_words(c_twords, panorama)
     exit(3)

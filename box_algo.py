@@ -132,8 +132,5 @@ def __combine_color_stats(color_stats_f, color_stats_l):
 
 
 def __combine_geometric_properties(geometrics_f, geometrics_l):
-    new_poly = geometrics_f.polygon.union(
-        geometrics_l.polygon).minimum_rotated_rectangle.exterior.coords[:-1]
-    new_poly = np.round(np.array(sum(new_poly, ()), dtype=np.float32))
-
+    new_poly = geometrics_f.polygon.union(geometrics_l.polygon).minimum_rotated_rectangle
     return __get_polygon_geometric_properties(new_poly)
