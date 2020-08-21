@@ -1,144 +1,102 @@
-from charnet.modeling.postprocessing import WordInstance
-import numpy as np
-import re
 import cv2
 from pylab import *
-from shapely.geometry import Polygon, LineString
+from shapely.geometry import LineString
 from shapely.affinity import scale
 from fuzzywuzzy import process
+import box_algo
 
 
-def concat_words(twords):
+def concat_words(tboxes):
     """combines close words"""
+    print("[+] Connecting words...")
+    # twords = __concat_intersecting_words(twords)
+    tboxes = __concat_adjacent_words(tboxes, horizontal=True)
+    tboxes = __concat_adjacent_words(tboxes, horizontal=False)
+    return tboxes
 
-    twords = __concat_intersecting_words(twords)
-    twords = __concat_adjacent_words(twords, horizontal=True)
-    twords = __concat_adjacent_words(twords, horizontal=False)
-    return twords
 
-
-def __concat_adjacent_words(twords, horizontal):
-    state = np.ones(len(twords), np.bool)
-    word_polys = [__create_word_poly(b) for b in twords]
-    new_words = []
+def __concat_adjacent_words(tboxes, horizontal):
+    state = np.ones(len(tboxes), np.bool)
+    new_bboxes = []
     while state.any():
         base_idx = state.nonzero()[0][0]
-        base_poly = __create_word_poly(twords[base_idx])
-
-        # Exterior looks like this:
-        # 3 ----- 2
-        # |       |
-        # 0 ----- 1
-        angle, line_len = __get_rect_properties(base_poly, horizontal)
-        cont_right_line = LineString([(base_poly.centroid.x, base_poly.centroid.y),
-                                      (base_poly.centroid.x + line_len * np.cos(angle),
-                                       base_poly.centroid.y + line_len * np.sin(angle))])
-        cont_left_line = LineString([(base_poly.centroid.x, base_poly.centroid.y),
-                                     (base_poly.centroid.x + line_len * np.cos(angle + np.pi),
-                                      base_poly.centroid.y + line_len * np.sin(angle + np.pi))])
+        center = (tboxes[base_idx].geometrics.polygon.centroid.x,
+                  tboxes[base_idx].geometrics.polygon.centroid.y)
+        line_len = tboxes[base_idx].geometrics.horiz_len if horizontal \
+            else tboxes[base_idx].geometrics.vert_len
+        angle = tboxes[base_idx].geometrics.horiz_angle if horizontal \
+            else tboxes[base_idx].geometrics.vert_angle
+        cont_right_line = LineString([(center[0], center[1]),
+                                      (center[0] + line_len * np.cos(angle),
+                                       center[1] + line_len * np.sin(angle))])
+        cont_left_line = LineString([(center[0], center[1]),
+                                     (center[0] + line_len * np.cos(angle + np.pi),
+                                      center[1] + line_len * np.sin(angle + np.pi))])
         changed = False
         min_dist = 10000  # ridiculously large number
         closest_idx = None
-        for idx in range(len(twords)):
-            new_poly = word_polys[idx]
-            dist = new_poly.distance(base_poly)
+        for idx in range(len(tboxes)):
+            new_poly = tboxes[idx].geometrics.polygon
+            dist = new_poly.distance(tboxes[base_idx].geometrics.polygon)
             if base_idx != idx and state[idx] and dist < min_dist and \
                     (new_poly.crosses(cont_right_line) or new_poly.crosses(cont_left_line)):
                 min_dist = dist
                 closest_idx = idx
 
         if closest_idx:
-            new_poly = word_polys[closest_idx]
+            new_poly = tboxes[closest_idx].geometrics.polygon
             # if base first
             if new_poly.crosses(cont_right_line):
-                new_word = __compund_words(twords[base_idx], twords[closest_idx],
-                                           base_poly, new_poly)
+                new_bbox = box_algo.compund_bboxes(tboxes[base_idx], tboxes[closest_idx])
             else:  # if base last
-                new_word = __compund_words(twords[closest_idx], twords[base_idx],
-                                           new_poly, base_poly)
+                new_bbox = box_algo.compund_bboxes(tboxes[closest_idx], tboxes[base_idx])
 
-            twords[base_idx] = new_word
+            tboxes[base_idx] = new_bbox
             state[closest_idx] = False
             changed = True
 
         if not changed:
             state[base_idx] = False
-            new_words.append(twords[base_idx])
-    return new_words
+            new_bboxes.append(tboxes[base_idx])
+    return new_bboxes
 
 
-def __get_rect_properties(base_poly, horizontal):
-    # Exterior looks like this:
-    # 3 ----- 2
-    # |       |
-    # 0 ----- 1
-    point_a = base_poly.exterior.coords[0]
-    point_b = base_poly.exterior.coords[1] if horizontal else base_poly.exterior.coords[3]
-    angle = np.arctan2(point_b[1] - point_a[1],
-                       point_b[0] - point_a[0])
-    line_len = np.sqrt(((point_b[0] - point_a[0]) ** 2) + ((point_b[1] - point_a[1]) ** 2))
-    return angle, line_len
-
-
-def __concat_intersecting_words(twords):
-    state = np.ones(len(twords), np.bool)
-    word_polys = [__create_word_poly(b) for b in twords]
-    new_words = []
-    while state.any():
-        base_idx = state.nonzero()[0][0]
-        base_poly = __create_word_poly(twords[base_idx])
-        changed = False
-        for idx in range(len(twords)):
-            new_poly = word_polys[idx]
-            if base_idx != idx and state[idx] and base_poly.intersects(new_poly):
-                # if base first
-                if base_poly.bounds[0] < new_poly.bounds[0]:  # or base_poly.bounds[1] < new_poly.bounds[1]:
-                    new_word = __compund_words(twords[base_idx], twords[idx], base_poly, new_poly)
-                else:  # if base last
-                    new_word = __compund_words(twords[idx], twords[base_idx], new_poly, base_poly)
-
-                twords[base_idx] = new_word
-                state[idx] = False
-                changed = True
-                break
-
-        if not changed:
-            state[base_idx] = False
-            new_words.append(twords[base_idx])
+# def __concat_intersecting_words(twords):
+#     state = np.ones(len(twords), np.bool)
+#     new_words = []
+#     while state.any():
+#         base_idx = state.nonzero()[0][0]
+#         base_poly = __create_word_poly(twords[base_idx])
+#         changed = False
+#         for idx in range(len(twords)):
+#             new_poly = word_polys[idx]
+#             if base_idx != idx and state[idx] and base_poly.intersects(new_poly):
+#                 # if base first
+#                 if base_poly.bounds[0] < new_poly.bounds[0]:  # or base_poly.bounds[1] < new_poly.bounds[1]:
+#                     new_word = __compund_words(twords[base_idx], twords[idx], base_poly, new_poly)
+#                 else:  # if base last
+#                     new_word = __compund_words(twords[idx], twords[base_idx], new_poly, base_poly)
+#
+#                 twords[base_idx] = new_word
+#                 state[idx] = False
+#                 changed = True
+#                 break
+#
+#         if not changed:
+#             state[base_idx] = False
+#             new_words.append(twords[base_idx])
 
 
     return new_words
 
 
-def __compund_words(first_t, last_t, first_p, last_p, amprecent=False):
-    new_bboxes = first_p.union(
-        last_p).minimum_rotated_rectangle.exterior.coords[:-1]
-    new_bboxes = np.round(np.array(sum(new_bboxes, ()), dtype=np.float32))
-
-    new_char_scores = np.vstack((first_t.char_scores,
-                                 last_t.char_scores))
-    new_text = first_t.text + (" & " if amprecent else " ") + last_t.text
-
-    new_word = WordInstance(
-        new_bboxes,
-        np.average([first_t.word_bbox_score, last_t.word_bbox_score]),
-        new_text,
-        np.average([first_t.text_score, last_t.text_score]),
-        new_char_scores
-    )
-    return new_word
-
-
-def __create_word_poly(b):
-    return Polygon([(b.word_bbox[0], b.word_bbox[1]), (b.word_bbox[2], b.word_bbox[3]),
-             (b.word_bbox[4], b.word_bbox[5]), (b.word_bbox[6], b.word_bbox[7])])
 
 
 def analyze_extracted_words(twords, panorama):
     # less_twords = __remove_duplicates(twords, cut_off=90)
     # TODO remove above 4 words?
     streets, others = __split_streets(twords, panorama)
-    streets = __search_junctions(streets)
+    # streets = __search_junctions(streets)
     others = __filter_others(others, cutoff_score=0.92)
     return streets, others
 
@@ -196,48 +154,10 @@ def __split_streets(twords, panorama):
     #Needs to check if there are more street signs via the histograms
 
 
-
-
-
     # find street names and define them as such
     # (hue)
     # "street"
     return twords, twords
-
-
-def __search_junctions(streets, max_junctions=5):
-    # find street junctions "regent st *&* barlet street"
-
-    state = np.ones(len(streets), np.bool)
-    word_polys = [__create_word_poly(b) for b in streets]
-    combined_words = []
-
-    current_junction = 0
-    while state.any():
-        base_idx = state.nonzero()[0][0]
-        base_poly = __create_word_poly(streets[base_idx])
-        base_poly_dialted = scale(base_poly, 3, 3)
-
-        changed = False
-        min_dist = 10000  # ridiculously large number
-        closest_idx = None
-        for idx in range(len(streets)):
-            new_poly = word_polys[idx]
-            if base_idx != idx and state[idx] and base_poly_dialted.intersects(new_poly) and \
-                    current_junction < max_junctions:
-                new_word = __compund_words(streets[base_idx], streets[idx],
-                                           base_poly, new_poly, amprecent=True)
-                streets[base_idx] = new_word
-                state[idx] = False
-                current_junction += 1
-                changed = True
-                break
-
-        if not changed:
-            state[base_idx] = False
-            current_junction = 0
-            combined_words.append(streets[base_idx])
-    return combined_words
 
 
 def __filter_others(others, cutoff_score=0.92):
@@ -252,5 +172,39 @@ def __filter_others(others, cutoff_score=0.92):
     return [b for b in others if b.text_score >= cutoff_score]
 
 
-
 # plt.plot(*p.exterior.xy)
+
+
+# def __search_junctions(streets, max_junctions=5):
+#     # find street junctions "regent st *&* barlet street"
+#
+#     state = np.ones(len(streets), np.bool)
+#     word_polys = [__create_word_poly(b) for b in streets]
+#     combined_words = []
+#
+#     current_junction = 0
+#     while state.any():
+#         base_idx = state.nonzero()[0][0]
+#         base_poly = __create_word_poly(streets[base_idx])
+#         base_poly_dialted = scale(base_poly, 3, 3)
+#
+#         changed = False
+#         min_dist = 10000  # ridiculously large number
+#         closest_idx = None
+#         for idx in range(len(streets)):
+#             new_poly = word_polys[idx]
+#             if base_idx != idx and state[idx] and base_poly_dialted.intersects(new_poly) and \
+#                     current_junction < max_junctions:
+#                 new_word = __compund_words(streets[base_idx], streets[idx],
+#                                            base_poly, new_poly, amprecent=True)
+#                 streets[base_idx] = new_word
+#                 state[idx] = False
+#                 current_junction += 1
+#                 changed = True
+#                 break
+#
+#         if not changed:
+#             state[base_idx] = False
+#             current_junction = 0
+#             combined_words.append(streets[base_idx])
+#     return combined_words
