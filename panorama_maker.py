@@ -75,11 +75,6 @@ class PanoramaMaker:
     '''
     def create_panorama(self, dont_reorder):
         self.__homographies = self.__reorder(dont_reorder)
-        # last_matches = self.__match_keypoints(self.__featuresKeys[0][1],
-        #                                       self.__featuresKeys[-1][1])
-        # H_last, status = self.__get_homography(last_matches, self.__featuresKeys[-1][0], self.__featuresKeys[0][0],
-        #                                        self.__reprojThresh)
-
         f = self.__estimate_focal_length()
 
         print("[+] warping photos to cylindrical format...")
@@ -128,8 +123,6 @@ class PanoramaMaker:
         #     cyl_featureKeys.append((temp, featursss[i]))
         #
         #
-
-
 
         print("[+] Stitching panorama...")
         # we stich from the middle to avoid as much rotation as we can

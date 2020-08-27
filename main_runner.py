@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 from panorama_maker import PanoramaMaker, DescriptorType, MatcherType
 from image_windows import ImageWindows
-# from charnet_runner import CharNetRunner
+from charnet_runner import CharNetRunner
 from matplotlib import use
 import box_algo
 import text_algo
@@ -63,9 +63,9 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     #     new_words_only = CharNetRunner.new_words_only(twords, word_instances)
     #     if new_words_only:
     #         twords += new_words_only
-    # print('\n[+] Done Extracting Text')
-    # vis_image = vis(panorama, twords)
-    # print('\r[+] Printed detecions')
+    # # print('\n[+] Done Extracting Text')
+    # # vis_image = vis(panorama, twords)
+    # # print('\r[+] Printed detecions')
 
     with open("words.pickle", 'rb') as f:
         import pickle
@@ -107,8 +107,7 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    # charnet = CharNetRunner(args.config_file)
-    charnet = None
+    charnet = CharNetRunner(args.config_file)
 
     if args.results_dir:
         os.makedirs(args.results_dir, exist_ok=True)

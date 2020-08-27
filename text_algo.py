@@ -1,16 +1,13 @@
 import cv2
-from pylab import *
 from shapely.geometry import LineString
-from shapely.affinity import scale
 from fuzzywuzzy import process
 import box_algo
 from scipy import stats
-
+import numpy as np
 
 def concat_words(tboxes):
     """combines close words"""
     print("[+] Connecting words...")
-    # twords = __concat_intersecting_words(twords)
     tboxes = __concat_adjacent_words(tboxes, horizontal=True)
     tboxes = __concat_adjacent_words(tboxes, horizontal=False)
     return tboxes
@@ -23,10 +20,10 @@ def __concat_adjacent_words(tboxes, horizontal):
         base_idx = state.nonzero()[0][0]
         center = (tboxes[base_idx].geometric.polygon.centroid.x,
                   tboxes[base_idx].geometric.polygon.centroid.y)
-        line_len = tboxes[base_idx].geometric.horiz_len if horizontal \
-            else tboxes[base_idx].geometric.vert_len
-        angle = tboxes[base_idx].geometric.horiz_angle if horizontal \
-            else tboxes[base_idx].geometric.vert_angle
+        line_len = tboxes[base_idx].geometric.horiz_len if horizontal else \
+            tboxes[base_idx].geometric.vert_len
+        angle = tboxes[base_idx].geometric.horiz_angle if horizontal else \
+            tboxes[base_idx].geometric.vert_angle
         cont_right_line = LineString([(center[0], center[1]),
                                       (center[0] + line_len * np.cos(angle),
                                        center[1] + line_len * np.sin(angle))])
@@ -62,6 +59,7 @@ def __concat_adjacent_words(tboxes, horizontal):
             new_bboxes.append(tboxes[base_idx])
     return new_bboxes
 
+
 def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=0.1,
                       color_diff=10, std_hue_limit=30, std_limit=50):
     cross_check = box_b.geometric.polygon.crosses(cont_right_line) or \
@@ -71,33 +69,36 @@ def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=
                   abs(box_b.geometric.vert_angle - box_a.geometric.vert_angle) < angle_diff
 
     if cross_check:
-        sf,pf = stats.ttest_ind(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0],
-                                equal_var=False)
-        sk, pk = stats.kruskal(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0])
+        shf, phf = stats.ttest_ind(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0]
+                                   ,equal_var=False)
+        ssf, psf = stats.ttest_ind(box_a.color_stats.color_data[1], box_b.color_stats.color_data[1]
+                                   ,equal_var=False)
+        svf, pvf = stats.ttest_ind(box_a.color_stats.color_data[2], box_b.color_stats.color_data[2]
+                                   ,equal_var=False)
+        shk, phk = stats.kruskal(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0])
+        ssk, psk = stats.kruskal(box_a.color_stats.color_data[1], box_b.color_stats.color_data[1])
+        svk, pvk = stats.kruskal(box_a.color_stats.color_data[2], box_b.color_stats.color_data[2])
         print("for words: %s, %s we got\n"
-              "\tTTEST -> p=%.2f\n\tKRUKSAL -> p=%.2f" %
-              (box_a.word.text, box_b.word.text, pf*100, pk*100))
-        hue_check = abs(box_a.color_stats.hue_mean - box_b.color_stats.hue_mean) <= color_diff and \
+              "\tHue:\n\t\tTTEST -> p=%.2f\n\t\tKRUKSAL -> p=%.2f\n"
+              "\tSat:\n\t\tTTEST -> p=%.2f\n\t\tKRUKSAL -> p=%.2f\n"
+              "\tVal:\n\t\tTTEST -> p=%.2f\n\t\tKRUKSAL -> p=%.2f" %
+              (box_a.word.text, box_b.word.text, phf*100, phk*100, psf*100, psk*100, pvf*100, pvk*100))
+        hue_check = abs(
+            box_a.color_stats.hue_mean - box_b.color_stats.hue_mean) <= color_diff and \
                     box_a.color_stats.hue_std <= std_hue_limit and \
                     box_b.color_stats.hue_std <= std_hue_limit
-        sat_check = abs(box_a.color_stats.sat_mean - box_b.color_stats.sat_mean) <= color_diff and \
+        sat_check = abs(
+            box_a.color_stats.sat_mean - box_b.color_stats.sat_mean) <= color_diff and \
                     box_a.color_stats.sat_std <= std_limit and \
                     box_b.color_stats.sat_std <= std_limit
-        val_check = abs(box_a.color_stats.val_mean - box_b.color_stats.val_mean) <= color_diff and \
+        val_check = abs(
+            box_a.color_stats.val_mean - box_b.color_stats.val_mean) <= color_diff and \
                     box_a.color_stats.val_std <= std_limit and \
                     box_b.color_stats.val_std <= std_limit
         color_check = hue_check or (sat_check and val_check)
-        return cross_check and color_check# and angle_check
+        return cross_check and color_check and angle_check
     else:
-        return cross_check# and angle_check
-
-# hue_mean = hue_mean
-#         self.hue_std = hue_std
-#         self.sat_mean = sat_mean
-#         self.sat_std = sat_std
-#         self.val_mean = val_mean
-#         self.val_std = val_std
-#         self.color_data = (hues, sats, vals)
+        return cross_check and angle_check
 
 
 def analyze_extracted_words(twords, panorama):
@@ -143,22 +144,8 @@ def __split_streets(twords, panorama):
             streets_signs.append(word)
         else:
             # Maybe not a street sign
-            mask = np.zeros((panorama.shape[0], panorama.shape[1]), dtype=np.bool)
-            poly = np.array(word.word_bbox).reshape((1, 4, 2))
-            cv2.fillPoly(mask, poly, True)
-            bins = 16
-            range = (0, 255)
-            hsv_img = cv2.cvtColor(panorama, cv2.COLOR_BGR2HSV)
-            hue_img = hsv_img[:, :, 0]
-            saturation_img = hsv_img[:, :, 1]
-            value_img = hsv_img[:, :, 2]
-            hist(hue_img[mask], bins=bins, range=range)
-            hist(saturation_img[mask], bins=bins, range=range)
-            hist(value_img[mask], bins=bins, range=range)
-
 
             other_signs.append(word)
-
     #Needs to check if there are more street signs via the histograms
 
 
@@ -181,65 +168,3 @@ def __filter_others(others, cutoff_score=0.92):
 
 
 # plt.plot(*p.exterior.xy)
-
-
-# def __search_junctions(streets, max_junctions=5):
-#     # find street junctions "regent st *&* barlet street"
-#
-#     state = np.ones(len(streets), np.bool)
-#     word_polys = [__create_word_poly(b) for b in streets]
-#     combined_words = []
-#
-#     current_junction = 0
-#     while state.any():
-#         base_idx = state.nonzero()[0][0]
-#         base_poly = __create_word_poly(streets[base_idx])
-#         base_poly_dialted = scale(base_poly, 3, 3)
-#
-#         changed = False
-#         min_dist = 10000  # ridiculously large number
-#         closest_idx = None
-#         for idx in range(len(streets)):
-#             new_poly = word_polys[idx]
-#             if base_idx != idx and state[idx] and base_poly_dialted.intersects(new_poly) and \
-#                     current_junction < max_junctions:
-#                 new_word = __compund_words(streets[base_idx], streets[idx],
-#                                            base_poly, new_poly, amprecent=True)
-#                 streets[base_idx] = new_word
-#                 state[idx] = False
-#                 current_junction += 1
-#                 changed = True
-#                 break
-#
-#         if not changed:
-#             state[base_idx] = False
-#             current_junction = 0
-#             combined_words.append(streets[base_idx])
-#     return combined_words
-
-
-# def __concat_intersecting_words(twords):
-#     state = np.ones(len(twords), np.bool)
-#     new_words = []
-#     while state.any():
-#         base_idx = state.nonzero()[0][0]
-#         base_poly = __create_word_poly(twords[base_idx])
-#         changed = False
-#         for idx in range(len(twords)):
-#             new_poly = word_polys[idx]
-#             if base_idx != idx and state[idx] and base_poly.intersects(new_poly):
-#                 # if base first
-#                 if base_poly.bounds[0] < new_poly.bounds[0]:  # or base_poly.bounds[1] < new_poly.bounds[1]:
-#                     new_word = __compund_words(twords[base_idx], twords[idx], base_poly, new_poly)
-#                 else:  # if base last
-#                     new_word = __compund_words(twords[idx], twords[base_idx], new_poly, base_poly)
-#
-#                 twords[base_idx] = new_word
-#                 state[idx] = False
-#                 changed = True
-#                 break
-#
-#         if not changed:
-#             state[base_idx] = False
-#             new_words.append(twords[base_idx])
-#     return new_words

@@ -18,7 +18,9 @@ class CharNetRunner:
         self.charnet = CharNet()
         self.charnet.load_state_dict(torch.load(cfg.WEIGHT))
         self.charnet.eval()
-        self.charnet.cuda()
+        if torch.cuda.is_available():
+            print("[*] Using cuda!")
+            self.charnet.cuda()
 
     def get_absolute_window_words(self, pano_windows, window):
         words = []
