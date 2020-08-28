@@ -98,6 +98,9 @@ class _Geometrics:
         return base_poly_comb
 
 
+
+
+
 def __check_in_street_list(word, street_names):
     return word in street_names
 

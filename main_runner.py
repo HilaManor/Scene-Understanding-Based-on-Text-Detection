@@ -50,8 +50,8 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     #     panorama_gen.add_photo(im_original)
     #
     # panorama = panorama_gen.create_panorama(dont_reorder)
-
-    # cv2.imwrite('Data\\FINALS\\coventry_panorama_final.png', panorama)
+    #
+    # cv2.imwrite('Data\\FINALS\\broadway_panorama_final5.png', panorama)
     panorama = cv2.imread(r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\broadway_panorama_final1.png")
 
     # windows = ImageWindows(panorama, input_size_cfg=2280)
@@ -76,9 +76,9 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     c_tboxes = text_algo.concat_words(tboxes, panorama)
     combined_vis_image = vis(panorama, c_tboxes)
 
-    text_algo.analyze_extracted_words(c_tboxes, panorama)
+    streets, others = text_algo.analyze_extracted_words(c_tboxes, panorama)
     exit(3)
-    loc = google_query.search_geolocation(c_twords)
+    loc = google_query.search_geolocation(c_tboxes)
 
 
 if __name__ == '__main__':
