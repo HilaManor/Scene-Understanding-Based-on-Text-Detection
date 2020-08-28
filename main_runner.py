@@ -73,11 +73,10 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
         twords = pickle.load(f)
 
     tboxes = box_algo.expand_word_data(twords, panorama)
+    c_tboxes = text_algo.concat_words(tboxes, panorama)
+    combined_vis_image = vis(panorama, c_tboxes)
 
-    c_twords = text_algo.concat_words(tboxes, panorama)
-    combined_vis_image = vis(panorama, c_twords)
-
-    text_algo.analyze_extracted_words(c_twords, panorama)
+    text_algo.analyze_extracted_words(c_tboxes, panorama)
     exit(3)
     loc = google_query.search_geolocation(c_twords)
 
