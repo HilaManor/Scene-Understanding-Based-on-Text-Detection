@@ -97,16 +97,15 @@ def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=
     return cross_check  # False
 
 
-def analyze_extracted_words(twords, panorama):
-    # less_twords = __remove_duplicates(twords, cut_off=90)
+def analyze_extracted_words(tboxes, panorama):
+    less_tboxes = __remove_duplicates(tboxes, cut_off=90)
     # TODO remove above 4 words?
-    streets, others = __split_streets(twords, panorama)
-    # streets = __search_junctions(streets)
+    streets, others = __split_streets(less_tboxes, panorama)
     others = __filter_others(others, cutoff_score=0.92)
     return streets, others
 
 
-def __remove_duplicates(twords, cut_off=90):
+def __remove_duplicates(tboxes, cut_off=90):
     """remove duplicated words that were found partially or fully, based on levinstein distance
 
         :param twords: a list of WordInstances to filter
@@ -114,18 +113,18 @@ def __remove_duplicates(twords, cut_off=90):
         :return: a list of filtered WordInstances
     """
     # remove_duplicates and half_duplicates
-    s_wrds = sorted(twords, key=lambda x: len(x.text), reverse=True)
+    s_wrds = sorted(tboxes, key=lambda x: len(x.word.text), reverse=True)
     extracted_words = []
     while len(s_wrds):
         comp = s_wrds[0]
         choices = s_wrds[1:]
-        similar_words = process.extractBests(comp, choices, processor=lambda x: x.text,
+        similar_words = process.extractBests(comp, choices, processor=lambda x: x.word.text,
                                              limit=len(choices), score_cutoff=cut_off)
         extracted_words.append(comp)
         s_wrds.remove(comp)
         for sim in similar_words:
             s_wrds.remove(sim[0])
-    return extracted_words
+    return [word for word in extracted_words if len(word.word.text.split()) <= 3]
 
 
 def __split_streets(twords, panorama):

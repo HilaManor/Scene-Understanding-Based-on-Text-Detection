@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 from scipy.stats import norm
+from scipy.optimize import curve_fit
 from shapely.geometry import Polygon
 from charnet.modeling.postprocessing import WordInstance
 
@@ -96,31 +97,6 @@ class _Geometrics:
                                                  geometric_l.vert_angle))  # uh..
         return base_poly_comb
 
-def expand_word_data(twords, panorama):
-    print('[+] Loading street names...')
-    with open(r'.\Data\StreetNamesVocab.txt', 'r') as streets_f:
-        street_names = [street.upper().strip('\r\n') for street in streets_f.readlines()]
-    boxes = []
-
-    print('[+] Gathering words data...')
-    for word in twords:
-        mask = np.zeros((panorama.shape[0], panorama.shape[1]), dtype=np.uint8)
-        poly = np.array(word.word_bbox, dtype=np.int32).reshape((1, 4, 2))
-        cv2.fillPoly(mask, poly, 255)
-        mask = mask.astype(np.bool)
-        color_stats = _ColorStats.extract_color_stats(panorama, mask)
-        is_in_streets_list = __check_in_street_list(word.text, street_names)
-        bbox_polygon = Polygon([(word.word_bbox[0], word.word_bbox[1]),
-                                (word.word_bbox[2], word.word_bbox[3]),
-                                (word.word_bbox[4], word.word_bbox[5]),
-                                (word.word_bbox[6], word.word_bbox[7])])
-        geometric = _Geometrics.get_polygon_geometric_properties(bbox_polygon)
-
-        # create the bbox instance
-        box = BoxInstance(word, color_stats, geometric, is_in_streets_list, mask)
-        boxes.append(box)
-    return boxes
-
 
 def __check_in_street_list(word, street_names):
     return word in street_names
@@ -151,3 +127,29 @@ def compund_bboxes(first_bbox, last_bbox, panorama, amprecent=False):
 
     # create the bbox instance
     return BoxInstance(new_word, color_stats, geometric, is_in_streets_list, mask)
+
+
+def expand_word_data(twords, panorama):
+    print('[+] Loading street names...')
+    with open(r'.\Data\StreetNamesVocab.txt', 'r') as streets_f:
+        street_names = [street.upper().strip('\r\n') for street in streets_f.readlines()]
+    boxes = []
+
+    print('[+] Gathering words data...')
+    for word in twords:
+        mask = np.zeros((panorama.shape[0], panorama.shape[1]), dtype=np.uint8)
+        poly = np.array(word.word_bbox, dtype=np.int32).reshape((1, 4, 2))
+        cv2.fillPoly(mask, poly, 255)
+        mask = mask.astype(np.bool)
+        color_stats = _ColorStats.extract_color_stats(panorama, mask)
+        is_in_streets_list = __check_in_street_list(word.text, street_names)
+        bbox_polygon = Polygon([(word.word_bbox[0], word.word_bbox[1]),
+                                (word.word_bbox[2], word.word_bbox[3]),
+                                (word.word_bbox[4], word.word_bbox[5]),
+                                (word.word_bbox[6], word.word_bbox[7])])
+        geometric = _Geometrics.get_polygon_geometric_properties(bbox_polygon)
+
+        # create the bbox instance
+        box = BoxInstance(word, color_stats, geometric, is_in_streets_list, mask)
+        boxes.append(box)
+    return boxes

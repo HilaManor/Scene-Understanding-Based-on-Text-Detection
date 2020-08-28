@@ -50,8 +50,8 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     #     panorama_gen.add_photo(im_original)
     #
     # panorama = panorama_gen.create_panorama(dont_reorder)
-    #
-    # cv2.imwrite('Data\\FINALS\\broadway_panorama_final5.png', panorama)
+
+    # cv2.imwrite('Data\\FINALS\\coventry_panorama_final.png', panorama)
     panorama = cv2.imread(r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\broadway_panorama_final1.png")
 
     # windows = ImageWindows(panorama, input_size_cfg=2280)
