@@ -2,9 +2,7 @@ import cv2
 from shapely.geometry import LineString
 from fuzzywuzzy import process
 import box_algo
-from scipy import stats
 import numpy as np
-import re
 
 def concat_words(tboxes, panorama):
     """combines close words"""
@@ -99,30 +97,16 @@ def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=
 
 
 def analyze_extracted_words(tboxes, panorama):
+    __update_grades(tboxes)
     less_tboxes = __remove_duplicates(tboxes, cut_off=90)
-    # TODO remove above 4 words?
-    streets, others = __split_streets(less_tboxes, panorama)
+    streets, others = __split_streets(less_tboxes)
     others = __filter_others(others, cutoff_score=0.92)
-
-    #update grade - how close to a street sign
-    for box in tboxes:
-        word_grade_update(box)
 
     return streets, others
 
-def word_grade_update(box):
-    check_key_street_words = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
-                            box.text, re.IGNORECASE)
-    if check_key_street_words:
-        updated_grade = 100
-    else:
-        #hue is [0, 180]
-        #streets_sign peak is hue = 74, moves to 41 after the convert
-        normalized_hue_mean = np.round(( 100 * box.color_stats.hue_mean ) / 180)
-        hue_difference = np.abs(normalized_hue_mean - 41)
-        updated_grade = box.is_in_streets_list * (100 - hue_difference)
-    box.grade = updated_grade
-
+def __update_grades(tboxes):
+    for box in tboxes:
+        box.update_grade()
 
 def __remove_duplicates(tboxes, cut_off=90):
     """remove duplicated words that were found partially or fully, based on levinstein distance
@@ -146,27 +130,15 @@ def __remove_duplicates(tboxes, cut_off=90):
     return [word for word in extracted_words if len(word.word.text.split()) <= 3]
 
 
-def __split_streets(twords, panorama):
-    length = len(twords)
-    streets_signs = []
-    other_signs = []
-    # for word in twords:
-    #     # check_word = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
-    #     #                         word.text, re.IGNORECASE)
-    #     if check_word:
-    #         # Found a street sign
-    #         streets_signs.append(word)
-    #     else:
-    #         # Maybe not a street sign
-    #
-    #         other_signs.append(word)
-    #Needs to check if there are more street signs via the histograms
-
-
-    # find street names and define them as such
-    # (hue)
-    # "street"
-    return twords, twords
+def __split_streets(tboxes, cutoff_grade=75):
+    streets = []
+    others = []
+    for box in tboxes:
+        if box.grade >= cutoff_grade:
+            streets.append(box)
+        else:
+            others.append(box)
+    return streets, others
 
 
 def __filter_others(others, cutoff_score=0.92):
@@ -178,7 +150,6 @@ def __filter_others(others, cutoff_score=0.92):
         :param cutoff_score: the cutoff score below which the words will be deducted
         :return: a list of filtered WordInstances
     """
-    return [b for b in others if b.text_score >= cutoff_score]
-
+    return [b for b in others if b.word.text_score >= cutoff_score]
 
 # plt.plot(*p.exterior.xy)
