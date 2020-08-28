@@ -74,7 +74,7 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
 
     tboxes = box_algo.expand_word_data(twords, panorama)
 
-    c_twords = text_algo.concat_words(tboxes)
+    c_twords = text_algo.concat_words(tboxes, panorama)
     combined_vis_image = vis(panorama, c_twords)
 
     text_algo.analyze_extracted_words(c_twords, panorama)

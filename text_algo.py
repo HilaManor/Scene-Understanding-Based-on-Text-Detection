@@ -5,15 +5,15 @@ import box_algo
 from scipy import stats
 import numpy as np
 
-def concat_words(tboxes):
+def concat_words(tboxes, panorama):
     """combines close words"""
     print("[+] Connecting words...")
-    tboxes = __concat_adjacent_words(tboxes, horizontal=True)
-    tboxes = __concat_adjacent_words(tboxes, horizontal=False)
+    tboxes = __concat_adjacent_words(tboxes, panorama, horizontal=True)
+    tboxes = __concat_adjacent_words(tboxes, panorama, horizontal=False)
     return tboxes
 
 
-def __concat_adjacent_words(tboxes, horizontal):
+def __concat_adjacent_words(tboxes, panorama, horizontal):
     state = np.ones(len(tboxes), np.bool)
     new_bboxes = []
     while state.any():
@@ -46,9 +46,9 @@ def __concat_adjacent_words(tboxes, horizontal):
             new_poly = tboxes[closest_idx].geometric.polygon
             # if base first
             if new_poly.crosses(cont_right_line):
-                new_bbox = box_algo.compund_bboxes(tboxes[base_idx], tboxes[closest_idx])
+                new_bbox = box_algo.compund_bboxes(tboxes[base_idx], tboxes[closest_idx], panorama)
             else:  # if base last
-                new_bbox = box_algo.compund_bboxes(tboxes[closest_idx], tboxes[base_idx])
+                new_bbox = box_algo.compund_bboxes(tboxes[closest_idx], tboxes[base_idx], panorama)
 
             tboxes[base_idx] = new_bbox
             state[closest_idx] = False
@@ -65,40 +65,36 @@ def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=
     cross_check = box_b.geometric.polygon.crosses(cont_right_line) or \
                   box_b.geometric.polygon.crosses(cont_left_line)
 
-    angle_check = abs(box_b.geometric.horiz_angle - box_a.geometric.horiz_angle) < angle_diff and \
-                  abs(box_b.geometric.vert_angle - box_a.geometric.vert_angle) < angle_diff
+    if cross_check:  # No point in checking others
+        angle_check = abs(box_b.geometric.horiz_angle - box_a.geometric.horiz_angle) < angle_diff \
+                      and abs(box_b.geometric.vert_angle - box_a.geometric.vert_angle) < angle_diff
+        kl_div = cv2.compareHist(box_a.color_stats.hist, box_b.color_stats.hist,
+                                 cv2.HISTCMP_KL_DIV)
+        chi_sqr = cv2.compareHist(box_a.color_stats.hist, box_b.color_stats.hist,
+                                  cv2.HISTCMP_CHISQR)
+        chi_sqr_alt = cv2.compareHist(box_a.color_stats.hist, box_b.color_stats.hist,
+                                      cv2.HISTCMP_CHISQR_ALT)
+        bhattacharyya = cv2.compareHist(box_a.color_stats.hist, box_b.color_stats.hist,
+                                        cv2.HISTCMP_BHATTACHARYYA)
+        correl = cv2.compareHist(box_a.color_stats.hist, box_b.color_stats.hist,
+                                 cv2.HISTCMP_CORREL)
 
-    if cross_check:
-        shf, phf = stats.ttest_ind(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0]
-                                   ,equal_var=False)
-        ssf, psf = stats.ttest_ind(box_a.color_stats.color_data[1], box_b.color_stats.color_data[1]
-                                   ,equal_var=False)
-        svf, pvf = stats.ttest_ind(box_a.color_stats.color_data[2], box_b.color_stats.color_data[2]
-                                   ,equal_var=False)
-        shk, phk = stats.kruskal(box_a.color_stats.color_data[0], box_b.color_stats.color_data[0])
-        ssk, psk = stats.kruskal(box_a.color_stats.color_data[1], box_b.color_stats.color_data[1])
-        svk, pvk = stats.kruskal(box_a.color_stats.color_data[2], box_b.color_stats.color_data[2])
-        print("for words: %s, %s we got\n"
-              "\tHue:\n\t\tTTEST -> p=%.2f\n\t\tKRUKSAL -> p=%.2f\n"
-              "\tSat:\n\t\tTTEST -> p=%.2f\n\t\tKRUKSAL -> p=%.2f\n"
-              "\tVal:\n\t\tTTEST -> p=%.2f\n\t\tKRUKSAL -> p=%.2f" %
-              (box_a.word.text, box_b.word.text, phf*100, phk*100, psf*100, psk*100, pvf*100, pvk*100))
-        hue_check = abs(
-            box_a.color_stats.hue_mean - box_b.color_stats.hue_mean) <= color_diff and \
-                    box_a.color_stats.hue_std <= std_hue_limit and \
-                    box_b.color_stats.hue_std <= std_hue_limit
-        sat_check = abs(
-            box_a.color_stats.sat_mean - box_b.color_stats.sat_mean) <= color_diff and \
-                    box_a.color_stats.sat_std <= std_limit and \
-                    box_b.color_stats.sat_std <= std_limit
-        val_check = abs(
-            box_a.color_stats.val_mean - box_b.color_stats.val_mean) <= color_diff and \
-                    box_a.color_stats.val_std <= std_limit and \
-                    box_b.color_stats.val_std <= std_limit
-        color_check = hue_check or (sat_check and val_check)
-        return cross_check and color_check and angle_check
-    else:
-        return cross_check and angle_check
+        # hue_check = abs(
+        #     box_a.color_stats.hue_mean - box_b.color_stats.hue_mean) <= color_diff and \
+        #             box_a.color_stats.hue_std <= std_hue_limit and \
+        #             box_b.color_stats.hue_std <= std_hue_limit
+        # sat_check = abs(
+        #     box_a.color_stats.sat_mean - box_b.color_stats.sat_mean) <= color_diff and \
+        #             box_a.color_stats.sat_std <= std_limit and \
+        #             box_b.color_stats.sat_std <= std_limit
+        # val_check = abs(
+        #     box_a.color_stats.val_mean - box_b.color_stats.val_mean) <= color_diff and \
+        #             box_a.color_stats.val_std <= std_limit and \
+        #             box_b.color_stats.val_std <= std_limit
+        # color_check = hue_check or (sat_check and val_check)
+        color_check = (kl_div < 20000) + (correl > 0.5) + (bhattacharyya < 0.8)
+        return color_check >= 2 #and angle_check
+    return cross_check  # False
 
 
 def analyze_extracted_words(twords, panorama):
@@ -136,16 +132,16 @@ def __split_streets(twords, panorama):
     length = len(twords)
     streets_signs = []
     other_signs = []
-    for word in twords:
-        check_word = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
-                                word.text, re.IGNORECASE)
-        if check_word:
-            # Found a street sign
-            streets_signs.append(word)
-        else:
-            # Maybe not a street sign
-
-            other_signs.append(word)
+    # for word in twords:
+    #     # check_word = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
+    #     #                         word.text, re.IGNORECASE)
+    #     if check_word:
+    #         # Found a street sign
+    #         streets_signs.append(word)
+    #     else:
+    #         # Maybe not a street sign
+    #
+    #         other_signs.append(word)
     #Needs to check if there are more street signs via the histograms
 
 

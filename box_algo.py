@@ -6,16 +6,18 @@ from charnet.modeling.postprocessing import WordInstance
 
 
 class BoxInstance:
-    def __init__(self, word_instance, color_stats, geometric, is_in_streets_list):
+    def __init__(self, word_instance, color_stats, geometric, is_in_streets_list, mask):
         self.word = word_instance
         self.color_stats = color_stats
         self.geometric = geometric
         self.is_in_streets_list = is_in_streets_list
         self.grade = 0
+        self.mask = mask
 
 
 class _ColorStats:
-    def __init__(self, hue_mean, hue_std, sat_mean, sat_std, val_mean, val_std, hues, sats, vals):
+    def __init__(self, hue_mean, hue_std, sat_mean, sat_std, val_mean, val_std,
+                 hues, sats, vals, hist):
         self.hue_mean = hue_mean
         self.hue_std = hue_std
         self.sat_mean = sat_mean
@@ -23,25 +25,25 @@ class _ColorStats:
         self.val_mean = val_mean
         self.val_std = val_std
         self.color_data = (hues, sats, vals)
+        self.hist = hist
 
     @staticmethod
-    def extract_color_stats(panorama, word):
-        mask = np.zeros((panorama.shape[0], panorama.shape[1]), dtype=np.uint8)
-        poly = np.array(word.word_bbox, dtype=np.int32).reshape((1, 4, 2))
-        cv2.fillPoly(mask, poly, 255)
-        mask = mask.astype(np.bool)
+    def extract_color_stats(panorama, mask):
         hsv_img = cv2.cvtColor(panorama, cv2.COLOR_BGR2HSV)
         hue_img = hsv_img[:, :, 0]
         saturation_img = hsv_img[:, :, 1]
         value_img = hsv_img[:, :, 2]
+
+#        hue_mean, hue_std = curve_fit(lambda x, mu, sig: norm.pdf(x, loc=mu, scale=sig)).fit(hue_img[mask])
         hue_mean, hue_std = norm.fit(hue_img[mask])
         sat_mean, sat_std = norm.fit(saturation_img[mask])
         val_mean, val_std = norm.fit(value_img[mask])
+        hist = cv2.calcHist([hsv_img], [0, 1], mask.astype(np.uint8), [50, 60], [0, 180, 0, 256])
         return _ColorStats(hue_mean, hue_std, sat_mean, sat_std, val_mean, val_std,
-                           hue_img[mask], saturation_img[mask], value_img[mask])
+                           hue_img[mask], saturation_img[mask], value_img[mask], hist)
 
     @staticmethod
-    def combine_color_stats(color_stats_f, color_stats_l):
+    def combine_color_stats(color_stats_f, color_stats_l, mask, panorama):
         hues_f, sats_f, vals_f, = color_stats_f.color_data
         hues_l, sats_l, vals_l, = color_stats_l.color_data
 
@@ -52,8 +54,11 @@ class _ColorStats:
         hue_mean, hue_std = norm.fit(hues)
         sat_mean, sat_std = norm.fit(sats)
         val_mean, val_std = norm.fit(vals)
+        hsv_img = cv2.cvtColor(panorama, cv2.COLOR_BGR2HSV)
+        hist = cv2.calcHist([hsv_img], [0, 1], mask.astype(np.uint8),
+                            [50, 60], [0, 180, 0, 256])
         return _ColorStats(hue_mean, hue_std, sat_mean, sat_std, val_mean, val_std,
-                           hues, sats, vals)
+                           hues, sats, vals, hist)
 
 
 class _Geometrics:
@@ -99,7 +104,11 @@ def expand_word_data(twords, panorama):
 
     print('[+] Gathering words data...')
     for word in twords:
-        color_stats = _ColorStats.extract_color_stats(panorama, word)
+        mask = np.zeros((panorama.shape[0], panorama.shape[1]), dtype=np.uint8)
+        poly = np.array(word.word_bbox, dtype=np.int32).reshape((1, 4, 2))
+        cv2.fillPoly(mask, poly, 255)
+        mask = mask.astype(np.bool)
+        color_stats = _ColorStats.extract_color_stats(panorama, mask)
         is_in_streets_list = __check_in_street_list(word.text, street_names)
         bbox_polygon = Polygon([(word.word_bbox[0], word.word_bbox[1]),
                                 (word.word_bbox[2], word.word_bbox[3]),
@@ -108,7 +117,7 @@ def expand_word_data(twords, panorama):
         geometric = _Geometrics.get_polygon_geometric_properties(bbox_polygon)
 
         # create the bbox instance
-        box = BoxInstance(word, color_stats, geometric, is_in_streets_list)
+        box = BoxInstance(word, color_stats, geometric, is_in_streets_list, mask)
         boxes.append(box)
     return boxes
 
@@ -117,7 +126,7 @@ def __check_in_street_list(word, street_names):
     return word in street_names
 
 
-def compund_bboxes(first_bbox, last_bbox, amprecent=False):
+def compund_bboxes(first_bbox, last_bbox, panorama, amprecent=False):
     new_bboxes = first_bbox.geometric.polygon.union(
         last_bbox.geometric.polygon).minimum_rotated_rectangle.exterior.coords[:-1]
     new_bboxes = np.round(np.array(sum(new_bboxes, ()), dtype=np.float32))
@@ -133,11 +142,12 @@ def compund_bboxes(first_bbox, last_bbox, amprecent=False):
         np.average([first_bbox.word.text_score, last_bbox.word.text_score]),
         new_char_scores
     )
-
-    color_stats = _ColorStats.combine_color_stats(first_bbox.color_stats, last_bbox.color_stats)
+    mask = first_bbox.mask | last_bbox.mask
+    color_stats = _ColorStats.combine_color_stats(first_bbox.color_stats, last_bbox.color_stats,
+                                                  mask, panorama)
     geometric = _Geometrics.combine_geometric_properties(first_bbox.geometric,
                                                           last_bbox.geometric)
     is_in_streets_list = first_bbox.is_in_streets_list or last_bbox.is_in_streets_list  # todo
 
     # create the bbox instance
-    return BoxInstance(new_word, color_stats, geometric, is_in_streets_list)
+    return BoxInstance(new_word, color_stats, geometric, is_in_streets_list, mask)
