@@ -4,6 +4,7 @@ from fuzzywuzzy import process
 import box_algo
 from scipy import stats
 import numpy as np
+import re
 
 def concat_words(tboxes):
     """combines close words"""
@@ -101,13 +102,32 @@ def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=
         return cross_check and angle_check
 
 
-def analyze_extracted_words(twords, panorama):
+def analyze_extracted_words(tboxes, panorama):
+
     # less_twords = __remove_duplicates(twords, cut_off=90)
     # TODO remove above 4 words?
-    streets, others = __split_streets(twords, panorama)
+    streets, others = __split_streets(tboxes, panorama)
     # streets = __search_junctions(streets)
     others = __filter_others(others, cutoff_score=0.92)
+
+    #update grade - how close to a street sign
+    for box in tboxes:
+        word_grade_update(box)
+
     return streets, others
+
+def word_grade_update(box):
+    check_key_street_words = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
+                            box.text, re.IGNORECASE)
+    if check_key_street_words:
+        updated_grade = 100
+    else:
+        #hue is [0, 180]
+        #streets_sign peak is hue = 74, moves to 41 after the convert
+        normalized_hue_mean = np.round(( 100 * box.color_stats.hue_mean ) / 180)
+        hue_difference = np.abs(normalized_hue_mean - 41)
+        updated_grade = box.is_in_streets_list * (100 - hue_difference)
+    box.grade = updated_grade
 
 
 def __remove_duplicates(twords, cut_off=90):
@@ -136,16 +156,16 @@ def __split_streets(twords, panorama):
     length = len(twords)
     streets_signs = []
     other_signs = []
-    for word in twords:
-        check_word = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
-                                word.text, re.IGNORECASE)
-        if check_word:
-            # Found a street sign
-            streets_signs.append(word)
-        else:
-            # Maybe not a street sign
-
-            other_signs.append(word)
+    # for word in twords:
+    #     check_word = re.findall(r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))',
+    #                             word.text, re.IGNORECASE)
+    #     if check_word:
+    #         # Found a street sign
+    #         streets_signs.append(word)
+    #     else:
+    #         # Maybe not a street sign
+    #
+    #         other_signs.append(word)
     #Needs to check if there are more street signs via the histograms
 
 
@@ -168,3 +188,7 @@ def __filter_others(others, cutoff_score=0.92):
 
 
 # plt.plot(*p.exterior.xy)
+
+
+
+

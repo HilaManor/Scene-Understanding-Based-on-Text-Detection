@@ -74,10 +74,8 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
 
     tboxes = box_algo.expand_word_data(twords, panorama)
 
-    c_twords = text_algo.concat_words(tboxes)
-    combined_vis_image = vis(panorama, c_twords)
 
-    text_algo.analyze_extracted_words(c_twords, panorama)
+    streets, others = text_algo.analyze_extracted_words(tboxes, panorama)
     exit(3)
     loc = google_query.search_geolocation(c_twords)
 

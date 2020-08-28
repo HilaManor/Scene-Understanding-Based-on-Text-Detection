@@ -113,6 +113,9 @@ def expand_word_data(twords, panorama):
     return boxes
 
 
+
+
+
 def __check_in_street_list(word, street_names):
     return word in street_names
 
