@@ -6,7 +6,8 @@ from shapely.geometry import Polygon
 from charnet.modeling.postprocessing import WordInstance
 import re
 
-STREET_PATERN = r'(.*\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD))'
+STREET_PATERN = r'(.*)\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD)$'
+EXCLUSIONS = ['ONE WAY']
 
 print('[+] Loading street names...')
 with open(r'.\Data\StreetNamesVocab.txt', 'r') as streets_f:
@@ -22,16 +23,15 @@ class BoxInstance:
         self.mask = mask
 
     def update_grade(self):
-        check_key_street_words = re.findall(STREET_PATERN,
-                                            self.word.text, re.IGNORECASE)
-        if check_key_street_words:
-            updated_grade = 100
+        check_key_street_words = bool(re.match(STREET_PATERN, self.word.text, re.IGNORECASE))
+        if self.word.text in EXCLUSIONS:
+            updated_grade = 0
         else:
-            # hue is [0, 180]
             # streets_sign peak is hue = 74, moves to 41 after the convert
             normalized_hue_mean = np.round((100 * self.color_stats.hue_mean) / 180)
             hue_difference = np.abs(normalized_hue_mean - 41)
-            updated_grade = self.is_in_streets_list * (100 - hue_difference)
+            updated_grade = check_key_street_words * 10 +\
+                            0.9 * self.is_in_streets_list * (100 - hue_difference)
         self.grade = updated_grade
 
 
@@ -117,6 +117,17 @@ class _Geometrics:
         return base_poly_comb
 
 
+def __search_in_street_names(text):
+    is_street_pattern = re.match(STREET_PATERN, text, re.IGNORECASE)
+
+    if text in EXCLUSIONS:
+        return False
+    if is_street_pattern:
+        return text in street_names or is_street_pattern.group(1) in street_names
+    else:
+        return text in street_names or (text + " street") in street_names
+
+
 def compund_bboxes(first_bbox, last_bbox, panorama, amprecent=False):
     new_bboxes = first_bbox.geometric.polygon.union(
         last_bbox.geometric.polygon).minimum_rotated_rectangle.exterior.coords[:-1]
@@ -138,7 +149,7 @@ def compund_bboxes(first_bbox, last_bbox, panorama, amprecent=False):
                                                   mask, panorama)
     geometric = _Geometrics.combine_geometric_properties(first_bbox.geometric,
                                                           last_bbox.geometric)
-    is_in_streets_list = new_text in street_names
+    is_in_streets_list = __search_in_street_names(new_text)
 
     # create the bbox instance
     return BoxInstance(new_word, color_stats, geometric, is_in_streets_list, mask)
@@ -153,7 +164,7 @@ def expand_word_data(twords, panorama):
         cv2.fillPoly(mask, poly, 255)
         mask = mask.astype(np.bool)
         color_stats = _ColorStats.extract_color_stats(panorama, mask)
-        is_in_streets_list = word.text in street_names
+        is_in_streets_list = __search_in_street_names(word.text)
         bbox_polygon = Polygon([(word.word_bbox[0], word.word_bbox[1]),
                                 (word.word_bbox[2], word.word_bbox[3]),
                                 (word.word_bbox[4], word.word_bbox[5]),
