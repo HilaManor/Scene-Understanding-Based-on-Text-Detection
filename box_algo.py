@@ -54,9 +54,10 @@ class _ColorStats:
             # new_promin = np.average(props["prominences"])
             peaks, props = find_peaks(hue_hist, prominence=new_promin)
         peaks_locs = [np.average([bins[bin_i+1],bins[bin_i]]) for bin_i in peaks]
+        dists_from_peaks = [abs(peak-hue_mean) for peak in peaks_locs]
         self.goodness_of_gauss_fit = {"peaks_count" : len(peaks),
-                                      "dist_from_nearest": np.min([abs(peak-hue_mean)
-                                                                   for peak in peaks_locs])}
+                                      "dist_from_nearest": np.min(dists_from_peaks)
+                                                            if len(dists_from_peaks) else None}
 
     @staticmethod
     def extract_color_stats(panorama, mask):

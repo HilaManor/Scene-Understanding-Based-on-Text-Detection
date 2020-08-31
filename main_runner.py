@@ -17,6 +17,7 @@ from matplotlib import use
 import box_algo
 import text_algo
 import google_query
+
 use("TkAgg")
 
 
@@ -77,8 +78,8 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     combined_vis_image = vis(panorama, c_tboxes)
 
     streets, others = text_algo.analyze_extracted_words(c_tboxes, panorama)
-    exit(3)
-    loc = google_query.search_geolocation(c_tboxes)
+    # exit(3)
+    loc = google_query.search_geolocation(streets, others)
 
 
 if __name__ == '__main__':
