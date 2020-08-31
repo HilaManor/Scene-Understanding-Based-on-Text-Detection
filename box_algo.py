@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 from scipy.stats import norm
-from scipy.optimize import curve_fit
+from scipy.signal import find_peaks
 from shapely.geometry import Polygon
 from charnet.modeling.postprocessing import WordInstance
 import re
@@ -46,6 +46,17 @@ class _ColorStats:
         self.val_std = val_std
         self.color_data = (hues, sats, vals)
         self.hist = hist
+
+        hue_hist, bins = np.histogram(hues, bins=int(np.round(np.sqrt(len(hues)))))
+        peaks, props = find_peaks(hue_hist, prominence=1)
+        if len(peaks) > 3:  # todo: check
+            new_promin = (np.max(props["prominences"]) - np.min(props["prominences"])) / 2
+            # new_promin = np.average(props["prominences"])
+            peaks, props = find_peaks(hue_hist, prominence=new_promin)
+        peaks_locs = [np.average([bins[bin_i+1],bins[bin_i]]) for bin_i in peaks]
+        self.goodness_of_gauss_fit = {"peaks_count" : len(peaks),
+                                      "dist_from_nearest": np.min([abs(peak-hue_mean)
+                                                                   for peak in peaks_locs])}
 
     @staticmethod
     def extract_color_stats(panorama, mask):
