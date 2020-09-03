@@ -53,7 +53,7 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     # panorama = panorama_gen.create_panorama(dont_reorder)
     #
     # cv2.imwrite('Data\\FINALS\\broadway_panorama_final5.png', panorama)
-    panorama = cv2.imread(r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\broadway_panorama_final1.png")
+    panorama = cv2.imread(r"C:\Users\user\Desktop\broadway_panorama_final1\broadway_panorama_final1.png")
 
     # windows = ImageWindows(panorama, input_size_cfg=2280)
     # twords = []
