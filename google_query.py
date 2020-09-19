@@ -10,11 +10,11 @@ def search_geolocation(streets, others):
     # Geocoding an address
     addr='duanereade'
     comps={'route':'duane'}
-    geocode_results = gmaps.geocode(address=addr, componenets=comps)
+    geocode_results = gmaps.geocode(address=addr, components=comps)
     gmaps.places_autocomplete('duane', components={'country': ['US', 'GB', 'CA', 'AU']})
     for result in geocode_results:
-        lat = result[0]['geometry']['location']['lat']
-        lng = result[0]['geometry']['location']['lng']
+        lat = result['geometry']['location']['lat']
+        lng = result['geometry']['location']['lng']
 
         #printing the location
         geolocator = Nominatim(user_agent="AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0")

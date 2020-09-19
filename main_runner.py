@@ -65,9 +65,9 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     #     new_words_only = CharNetRunner.new_words_only(twords, word_instances)
     #     if new_words_only:
     #         twords += new_words_only
-    # print('\n[+] Done Extracting Text')
-    # vis_image = vis(panorama, twords)
-    # print('\r[+] Printed detecions')
+    # # print('\n[+] Done Extracting Text')
+    # # vis_image = vis(panorama, twords)
+    # # print('\r[+] Printed detecions')
 
     with open("words.pickle", 'rb') as f:
         import pickle

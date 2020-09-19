@@ -23,9 +23,12 @@ class BoxInstance:
         self.mask = mask
 
     def update_grade(self):
+        # p_count, dist_nearest_p = _ColorStats.get_goodness_of_fit(self)
         check_key_street_words = bool(re.match(STREET_PATERN, self.word.text, re.IGNORECASE))
         if self.word.text in EXCLUSIONS:
             updated_grade = 0
+        # if p_count != 1:
+        #     updated_grade = 0
         else:
             # streets_sign peak is hue = 74, moves to 41 after the convert
             normalized_hue_mean = np.round((100 * self.color_stats.hue_mean) / 180)
@@ -58,6 +61,11 @@ class _ColorStats:
         self.goodness_of_gauss_fit = {"peaks_count" : len(peaks),
                                       "dist_from_nearest": np.min(dists_from_peaks)
                                                             if len(dists_from_peaks) else None}
+
+    # def get_goodness_of_fit(self):
+    #         p_count = self.goodness_of_gauss_fit['peaks_count']
+    #         dist_nearest_p = self.goodness_of_gauss_fit['dist_from_nearest']
+    #         return p_count, dist_nearest_p
 
     @staticmethod
     def extract_color_stats(panorama, mask):
