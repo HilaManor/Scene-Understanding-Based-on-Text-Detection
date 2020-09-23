@@ -177,7 +177,7 @@ class OrientedTextPostProcessing(nn.Module):
 
         def filter_and_correct(word_ins, lexicon, short_lexicon):
             if len(word_ins.text) < 3:
-                if word_ins.text_score >= 0.80:
+                if len(word_ins.text) == 2 and word_ins.text_score >= 0.87:
                     # check dict for acceptable short-words, such as conjunctions and street abbreviations.
                     dist, voc = match_lexicon(word_ins.text, short_lexicon)
                     word_ins.text = voc
