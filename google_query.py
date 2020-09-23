@@ -4,6 +4,10 @@ from gmplot import *
 from geopy.geocoders import Nominatim
 from geopy.point import Point
 import os
+import itertools
+
+API_KEY = 'AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0'
+suffixes = ['st', 'ave', 'bvd']
 
 def search_geolocation(streets, others):
     gmaps = googlemaps.Client(key='AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0')

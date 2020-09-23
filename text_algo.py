@@ -59,8 +59,7 @@ def __concat_adjacent_words(tboxes, panorama, horizontal):
     return new_bboxes
 
 
-def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=0.1,
-                      color_diff=10, std_hue_limit=30, std_limit=50):
+def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=0.1):
     cross_check = box_b.geometric.polygon.crosses(cont_right_line) or \
                   box_b.geometric.polygon.crosses(cont_left_line)
 
@@ -78,19 +77,6 @@ def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=
         correl = cv2.compareHist(box_a.color_stats.hist, box_b.color_stats.hist,
                                  cv2.HISTCMP_CORREL)
 
-        # hue_check = abs(
-        #     box_a.color_stats.hue_mean - box_b.color_stats.hue_mean) <= color_diff and \
-        #             box_a.color_stats.hue_std <= std_hue_limit and \
-        #             box_b.color_stats.hue_std <= std_hue_limit
-        # sat_check = abs(
-        #     box_a.color_stats.sat_mean - box_b.color_stats.sat_mean) <= color_diff and \
-        #             box_a.color_stats.sat_std <= std_limit and \
-        #             box_b.color_stats.sat_std <= std_limit
-        # val_check = abs(
-        #     box_a.color_stats.val_mean - box_b.color_stats.val_mean) <= color_diff and \
-        #             box_a.color_stats.val_std <= std_limit and \
-        #             box_b.color_stats.val_std <= std_limit
-        # color_check = hue_check or (sat_check and val_check)
         color_check = (kl_div < 20000) + (correl > 0.5) + (bhattacharyya < 0.8)
         return color_check >= 2 #and angle_check
     return cross_check  # False
