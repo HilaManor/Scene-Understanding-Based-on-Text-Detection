@@ -7,7 +7,6 @@ from charnet.modeling.postprocessing import WordInstance
 import re
 
 STREET_PATERN = r'(.*)\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD)$'
-EXCLUSIONS = ['ONE WAY']
 
 print('[+] Loading street names...')
 with open(r'.\Data\StreetNamesVocab.txt', 'r') as streets_f:
@@ -25,7 +24,6 @@ class BoxInstance:
     def update_grade(self):
         # p_count, dist_nearest_p = _ColorStats.get_goodness_of_fit(self)
         check_key_street_words = bool(re.match(STREET_PATERN, self.word.text, re.IGNORECASE))
-        if self.word.text in EXCLUSIONS:
             updated_grade = 0
         # if p_count != 1:
         #     updated_grade = 0
@@ -141,8 +139,8 @@ class _Geometrics:
 def __search_in_street_names(text):
     is_street_pattern = re.match(STREET_PATERN, text, re.IGNORECASE)
 
-    if text in EXCLUSIONS:
-        return False
+    # if text in EXCLUSIONS:
+    #     return False
     if is_street_pattern:
         return text in street_names or is_street_pattern.group(1) in street_names
     else:
