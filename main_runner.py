@@ -1,11 +1,20 @@
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#
-#
-#
-#
-# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""Scene Understanding Based on Text Detection
+Hila Manor & Adir Krayden
 
-# Imports
+Find the geographical location of a given place in an urban area, based on the words that appear
+in its pictures.
+The algorithm is comprised of 3 step:
+    1. Images received as input are processed to produce a unified panorama image.
+    2. Text is extracted, processed and filtered from panorama.
+        A distinction between the street signs and the rest of the signs is made.
+    3. The separated information is used to search for the geographical location of the scene.
+
+
+Images with good lighting conditions and enough words that characterize the location help.
+Low image resolution limits the performance of the algorithm.
+"""
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
 import argparse
 import os
 import cv2
@@ -17,11 +26,17 @@ from matplotlib import use
 import box_algo
 import text_algo
 import google_query
-
 use("TkAgg")
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 def vis(img, instances):
+    """ Visualise the extracted text by painting the text & bounding boxes on the picture
+
+    :param img: image to draw upon the words. will not be changed.
+    :param instances: WordInstances/BoxInstances to draw
+    :return: copy of image with words drawn upon
+    """
     img_word_ins = img.copy()
     for ins in instances:
         word_ins = ins.word if type(instances[0]) == box_algo.BoxInstance else ins
@@ -36,11 +51,13 @@ def vis(img, instances):
     return img_word_ins
 
 
-def parse_dir(scene_path, output_path, charnet, dont_reorder):
+def parse_dir(scene_path, output_path, char_net, dont_reorder):
     """ Runs the context analysis on the given images of the scene in the given directory
 
     :param scene_path: Directory containing images of the scene. images should overlap
     :param output_path: All of the algorithm output will be thrown out in this path
+    :param char_net: charnetRunner instance to use to run extract the text
+    :param dont_reorder: Boolean value to try and reorder the images, or treat them as ordered
     :return: None
     """
     panorama_gen = PanoramaMaker(descriptor_type=DescriptorType.SIFT, matcher_type=MatcherType.KNN)
@@ -59,8 +76,8 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     twords = []
     for idx, window in enumerate(windows, 1):
         print("[-] Splitting to windows: %d/%d" % (idx, len(windows)), end='\r')
-        word_instances = charnet.get_absolute_window_words(windows, window)
-        word_instances = charnet.clean_duplicate_words(word_instances)
+        word_instances = char_net.get_absolute_window_words(windows, window)
+        word_instances = char_net.clean_duplicate_words(word_instances)
         new_words_only = CharNetRunner.new_words_only(twords, word_instances)
         if new_words_only:
             twords += new_words_only
@@ -85,8 +102,7 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
         f.write("\nothers:")
         f.writelines(['\n\t' + s.word.text for s in others])
         f.write('\n')
-    loc = google_query.search_location(streets, others, output_path)
-    return twords, panorama
+    google_query.search_location(streets, others, output_path)
 
 
 if __name__ == '__main__':
@@ -128,14 +144,8 @@ if __name__ == '__main__':
             curr_scene_path = os.path.join(args.scenes_dir, scene)
             curr_output_dir = os.path.join(args.results_dir, scene)
             os.makedirs(curr_output_dir, exist_ok=True)
-            twords, panorama = parse_dir(curr_scene_path, curr_output_dir, charnet, args.dont_reorder)
+            parse_dir(curr_scene_path, curr_output_dir, charnet, args.dont_reorder)
     else:
         if not args.results_dir:
             args.results_dir = args.single_scene
-        twords, panorama = parse_dir(args.single_scene, args.results_dir, charnet, args.dont_reorder)
-
-        # print([t.text for t in twords])
-        # if 'DUANEREADE' in [t.text for t in twords]:
-        #     cv2.imwrite('Data\\FINALS\\broadway_panorama_final5.png', panorama)
-        #     break
-
+        parse_dir(args.single_scene, args.results_dir, charnet, args.dont_reorder)
