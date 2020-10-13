@@ -1,6 +1,6 @@
 import googlemaps
 import webbrowser
-from gmplot import *
+import gmplot
 import numpy as np
 from geopy.geocoders import Nominatim
 from geopy.point import Point
@@ -10,21 +10,65 @@ import itertools
 API_KEY = 'AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0'
 suffixes = ['st', 'ave', 'bvd']
 
-def search_geolocation(streets, others):
-    gmaps = googlemaps.Client(key='AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0')
-    # Geocoding an address
-    addr='duanereade'
-    comps={'route':'duane'}
-    geocode_results = gmaps.geocode(address=addr, components=comps)
-    gmaps.places_autocomplete('duane', components={'country': ['US', 'GB', 'CA', 'AU']})
-    for result in geocode_results:
-        lat = result['geometry']['location']['lat']
-        lng = result['geometry']['location']['lng']
+def search_location(streets, others, output_path):
+    gmaps = googlemaps.Client(key=API_KEY)
 
-        #printing the location
-        geolocator = Nominatim(user_agent="AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0")
-        location = geolocator.reverse(Point(lat, lng))
-        print(location.address)
+    if len(streets):
+        print("[+] Trying to match exact geo-location data...")  # Geocoding an address
+        if _search_geolocation(gmaps, output_path, streets):
+            return
+    else:
+        print("[X] No geo-data was found!")
+
+def _search_geolocation(gmaps, output_path, streets):
+    combinations_to_try = __create_suffixes_combinations(streets)
+    results = []
+    for comb in combinations_to_try:
+        geocode_results = gmaps.geocode(components={'route': comb})
+        geocode_results2 = gmaps.geocode(comb)
+
+        for res in geocode_results:
+            if res not in results:
+                results.append(res)
+    best = [res for res in results if not res.get('partial_match')]
+    all_matches = True
+    stop = False
+    if len(best):
+        print("[*] Best Matches:")
+        lats, lngs = __disp_matches(best)
+
+        while True:
+            inp = input("Type:\tNUMBER to open map\n\tP to choose from Partial matches"
+                        "\n\tG to try to guess\n\tS to stop: ").upper()
+            if inp == "S":
+                stop = True
+                break
+            elif inp == "P":
+                break
+            elif inp == "G":
+                all_matches = False
+                break
+            elif int(inp) > 0 and int(inp) - 1 <= len(best):
+                # open the map
+                i = int(inp) - 1
+                __plot_point(lats[i], lngs[i], output_path, best[i]["formatted_address"])
+
+    if not stop and all_matches and len(results):
+        print("[*] Partial Matches")
+        lats, lngs = __disp_matches(results)
+        while True:
+            inp = input("Type:\tNUMBER to open map\n\tG to try to guess\n\tS to stop: ").upper()
+            if inp == "S":
+                stop = True
+                break
+            elif inp == "G":
+                break
+            elif int(inp) > 0 and int(inp) - 1 <= len(results):
+                # open the map
+                i = int(inp) - 1
+                __plot_point(lats[i], lngs[i], output_path, results[i]["formatted_address"])
+    return stop
+
 
 def __disp_matches(results):
     # geolocator = Nominatim(user_agent=API_KEY)
