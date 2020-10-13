@@ -5,6 +5,9 @@ import box_algo
 import numpy as np
 import re
 
+EXCLUSIONS = ['ONE WAY', 'STOP']
+
+
 def concat_words(tboxes, panorama):
     """combines close words"""
     print("[+] Connecting words...")
@@ -150,6 +153,8 @@ def __filter_others(others, cutoff_score=0.92):
         :param cutoff_score: the cutoff score below which the words will be deducted
         :return: a list of filtered WordInstances
     """
-    return [b for b in others if b.word.text_score >= cutoff_score]
+    better_others = [b for b in others if b.word.text_score >= cutoff_score and b.word.text not in EXCLUSIONS]
+    longer_others = [b for b in better_others if len(b.word.text) > 3]
+    return sorted(longer_others, key=lambda x: x.word.text_score, reverse=True)[:5]
 
 # plt.plot(*p.exterior.xy)
