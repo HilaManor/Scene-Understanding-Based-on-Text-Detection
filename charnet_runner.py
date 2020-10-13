@@ -1,12 +1,19 @@
-from shapely.geometry import Polygon
+"""Warper module for charnet.
 
+Functions for extracting words, using charnet, but on our windows of panorama framework"""
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
+from shapely.geometry import Polygon
 import torch
 import cv2
 from charnet.modeling.model import CharNet
 from charnet.config import cfg
 import numpy as np
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 
 class CharNetRunner:
+    """Warper for charnet. Handles extracting words on windows from the panorama"""
     def __init__(self, config_file):
         self.config_file_path = config_file
 
@@ -23,13 +30,22 @@ class CharNetRunner:
             self.charnet.cuda()
 
     def get_absolute_window_words(self, pano_windows, window):
+        """Get the words of the given window.
+
+        Every word position is relative to the whole panorama, i.e. absolute position
+
+        :param pano_windows: ImageWindows instance of the panorama
+        :param window: Window instance of the current window, must be a member of the pano_windows
+        :return: WordsInstance list of recognized words in the current window
+        """
         words = []
         im, scale_w, scale_h, window_w, window_h = self.__resize(window.im)
-        with torch.no_grad():  # TODO CHECK
-            # char_bboxes, char_scores, word_instances
+        with torch.no_grad():
+            # char_bboxes, char_scores, word_instances = ...
             _, _, word_instances = self.charnet(im, scale_w, scale_h, window_w, window_h)
 
         for word in word_instances:
+            # To combat google's watermark of street-view messing with the words
             if word.text == 'GOOGLE':
                 continue
             old_word_bbox = word.word_bbox.copy()
@@ -37,6 +53,7 @@ class CharNetRunner:
             word.word_bbox[::2] = [x_coord + window.pos_x for x_coord in word.word_bbox[::2]]
             word.word_bbox[1::2] = [y_coord + window.pos_y for y_coord in word.word_bbox[1::2]]
             word_abs = word
+            # open a new window for near-border words
             if self.__word_is_near_border(old_word_bbox, 50, window_w, window_h):
                 zoom_w = pano_windows.get_window_at_pos(word.word_bbox[0], word.word_bbox[1], 50)
                 z_im, z_scale_w, z_scale_h, z_window_w, z_window_h = self.__resize(zoom_w.im)
@@ -45,10 +62,12 @@ class CharNetRunner:
                                                           z_window_w, z_window_h)
 
                 for z_word in z_word_instances:  # Swap only the word that intersects
-                    z_word.word_bbox[::2] = [x_coord + zoom_w.pos_x for x_coord in z_word.word_bbox[::2]]
-                    z_word.word_bbox[1::2] = [y_coord + zoom_w.pos_y for y_coord in z_word.word_bbox[1::2]]
+                    z_word.word_bbox[::2] = [x_coord + zoom_w.pos_x for
+                                             x_coord in z_word.word_bbox[::2]]
+                    z_word.word_bbox[1::2] = [y_coord + zoom_w.pos_y for
+                                              y_coord in z_word.word_bbox[1::2]]
                     if self._do_words_intersect(word, z_word):
-                        word_abs = z_word
+                        word_abs = z_word  # save only the new word from the window
                         break
 
             words.append(word_abs)
@@ -63,11 +82,18 @@ class CharNetRunner:
         scale_h = float(h) / image_resize_height
         scale_w = float(w) / image_resize_width
         im = cv2.resize(im, (image_resize_width, image_resize_height),
-                              interpolation=cv2.INTER_LINEAR)
+                        interpolation=cv2.INTER_LINEAR)
         return im, scale_w, scale_h, w, h
 
     @staticmethod
     def _do_words_intersect(s_word, o_word):
+        """Checks if the bounding boxes of 2 words intersects (goes ontop of each-other)
+
+        :param s_word: first WordInstance
+        :param o_word: second WordInstance
+        :return: Boolean of weather an intersection occurs
+        """
+
         s_poly = Polygon([(x_pos, y_pos) for x_pos, y_pos in zip(s_word.word_bbox[::2],
                                                                  s_word.word_bbox[1::2])])
         o_poly = Polygon([(x_pos, y_pos) for x_pos, y_pos in zip(o_word.word_bbox[::2],
@@ -76,6 +102,14 @@ class CharNetRunner:
 
     @staticmethod
     def __word_is_near_border(bbox, margin, window_w, window_h):
+        """Check if a given bounding box (of a word) is near the border of the window
+
+        :param bbox: bounding box (of a word recognized by the network)
+        :param margin: margin amount (in pixels) from the side of the window
+        :param window_w: window's width
+        :param window_h: window's height
+        :return: Boolean of weather the word is near the border
+        """
         #  [0][1]       [2][3]
         #
         #             [4][5]       [6][7]
@@ -87,6 +121,15 @@ class CharNetRunner:
 
     @staticmethod
     def clean_duplicate_words(words):
+        """Remove words that appeared in multiple windows, but are in face the same instance
+
+        This might happen when a word is near 2 margins, and so 2 windows will open for it
+        seperatly, and so it will be recognized twice. The comparison is based on intersection,
+        i.e. the absolute position of the word in the panorama
+
+        :param words: WordsInstance list
+        :return: filtered WordsInstance list
+        """
         clean_words = []
         state = np.ones(len(words))
         while state.any():
@@ -113,6 +156,14 @@ class CharNetRunner:
 
     @staticmethod
     def new_words_only(base_words, window_words):
+        """Filter previously recognized words from this window's recognized words
+
+        this are the same words position-wise.
+
+        :param base_words: previously recognized words in a list of WordsInstance
+        :param window_words: this window's list of WordsInstance recognized words
+        :return: filtered WordsInstance list
+        """
         new_words = []
         if base_words:
             for wword in window_words:

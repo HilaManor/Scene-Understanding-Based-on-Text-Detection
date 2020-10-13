@@ -1,11 +1,12 @@
 """Utility functions for getting images to run on from a panorama image.
 
 class ImageWindows - wrapper for a big window functions
-class Window - wrapper for functions on a signle window
+class Window - wrapper for functions on a single window
 """
 
-# Imports
-import numpy as np
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
+# import numpy as np
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 class ImageWindows:

@@ -1,3 +1,6 @@
+
+
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Imports ~~~~~~~~~~~~~~~~~~~~~~~
 import cv2
 from shapely.geometry import LineString
 from fuzzywuzzy import process
@@ -5,7 +8,9 @@ import box_algo
 import numpy as np
 import re
 
+# ~~~~~~~~~~~~~~~~~~~~~~~~ Constants ~~~~~~~~~~~~~~~~~~~~~~~
 EXCLUSIONS = ['ONE WAY', 'STOP']
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 def concat_words(tboxes, panorama):
@@ -156,5 +161,3 @@ def __filter_others(others, cutoff_score=0.92):
     better_others = [b for b in others if b.word.text_score >= cutoff_score and b.word.text not in EXCLUSIONS]
     longer_others = [b for b in better_others if len(b.word.text) > 3]
     return sorted(longer_others, key=lambda x: x.word.text_score, reverse=True)[:5]
-
-# plt.plot(*p.exterior.xy)
