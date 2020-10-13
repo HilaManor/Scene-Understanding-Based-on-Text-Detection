@@ -36,6 +36,30 @@ def search_location(streets, others, output_path):
                           pair[1]["geometry"]["location"]["lng"]) < 50:
             close_guesses.append(pair)
 
+    if len(close_guesses):
+        print("[+] Found some intersections!")
+        lats = [np.mean([pair[0]["geometry"]["location"]["lat"],
+                         pair[1]["geometry"]["location"]["lat"]]) for pair in close_guesses]
+        lngs = [np.mean([pair[0]["geometry"]["location"]["lng"],
+                         pair[1]["geometry"]["location"]["lng"]]) for pair in close_guesses]
+        for i in range(len(close_guesses)):
+            print("\t%d - %s and %s at (%.5fN, %.5fE)" % (i + 1,
+                                                          close_guesses[i][0]["formatted_address"],
+                                                          close_guesses[i][0]["formatted_address"],
+                                                          lats[i], lngs[i]))
+
+        while True:
+            inp = input("Type map NUMBER to open, or S to stop: ").upper()
+            if inp == "S":
+                return
+            elif int(inp) > 0 and int(inp) - 1 <= len(close_guesses):
+                # open the map
+                i = int(inp) - 1
+                __plot_point(lats[i], lngs[i], output_path,
+                             close_guesses[i][0]["formatted_address"] + ' and ' +
+                             close_guesses[i][0]["formatted_address"])
+
+
 def _search_geolocation(gmaps, output_path, streets):
     combinations_to_try = __create_suffixes_combinations(streets)
     results = []
