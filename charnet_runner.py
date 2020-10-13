@@ -1,4 +1,5 @@
-"""Warper module for charnet.
+"""Warper module for charnet. Handles the first part of the 2nd algorithm stage: Extracting the
+street-signs.
 
 Functions for extracting words, using charnet, but on our windows of panorama framework"""
 
