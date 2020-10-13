@@ -6,7 +6,8 @@ from shapely.geometry import Polygon
 from charnet.modeling.postprocessing import WordInstance
 import re
 
-STREET_PATERN = r'(.*)\s(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD)$'
+ST_SUFFIX = '(ST|WAY|STREET|AV|AVE|AVENUE|BD|BV|BVD|BOULEVARD|RD|ROAD)'
+STREET_PATERN = r'.*\s' + ST_SUFFIX + '([^a-z]|$)'
 
 print('[+] Loading street names...')
 with open(r'.\Data\StreetNamesVocab.txt', 'r') as streets_f:
