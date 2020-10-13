@@ -20,20 +20,22 @@ class BoxInstance:
         self.geometric = geometric
         self.is_in_streets_list = is_in_streets_list
         self.grade = 0
+        self.key_street_word = False
         self.mask = mask
 
     def update_grade(self):
-        # p_count, dist_nearest_p = _ColorStats.get_goodness_of_fit(self)
         check_key_street_words = bool(re.match(STREET_PATERN, self.word.text, re.IGNORECASE))
+        self.key_street_word = check_key_street_words
+        if not self.color_stats.goodness_of_gauss_fit["peaks_count"]:
             updated_grade = 0
-        # if p_count != 1:
-        #     updated_grade = 0
         else:
-            # streets_sign peak is hue = 74, moves to 41 after the convert
-            normalized_hue_mean = np.round((100 * self.color_stats.hue_mean) / 180)
-            hue_difference = np.abs(normalized_hue_mean - 41)
-            updated_grade = check_key_street_words * 10 +\
-                            0.9 * self.is_in_streets_list * (100 - hue_difference)
+            # green street signs have usually green(74) background color
+            hue_mean_dist = np.round(100 * np.abs(self.color_stats.hue_mean - 74) / 180)
+            fit_grade = max(0, self.color_stats.goodness_of_gauss_fit["dist_from_nearest"] - 7)
+            updated_grade = 10 * check_key_street_words + \
+                            5 * self.is_in_streets_list + \
+                            0.85 * ((100 - hue_mean_dist) *
+                                   (100 - fit_grade) * 0.01)
         self.grade = updated_grade
 
 
