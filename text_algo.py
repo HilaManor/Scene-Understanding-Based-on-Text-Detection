@@ -116,6 +116,10 @@ def __remove_duplicates(tboxes, cut_off=90, street_grade=90):
         extracted_words.append(comp)
         s_wrds.remove(comp)
         for sim in similar_words:
+            # unless this is a street sign, delete it
+            if sim[0].grade >= street_grade and \
+                    not __same_street_sign_exists(sim[0], extracted_words, street_grade=street_grade):
+                extracted_words.append(sim[0])
             s_wrds.remove(sim[0])
     return [word for word in extracted_words if len(word.word.text.split()) <= 3]
 
