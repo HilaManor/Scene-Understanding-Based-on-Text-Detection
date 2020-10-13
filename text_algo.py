@@ -3,6 +3,7 @@ from shapely.geometry import LineString
 from fuzzywuzzy import process
 import box_algo
 import numpy as np
+import re
 
 def concat_words(tboxes, panorama):
     """combines close words"""
@@ -101,8 +102,11 @@ def __remove_duplicates(tboxes, cut_off=90, street_grade=90):
         :param cut_off: score below which the words will deemed "unsimilar" and won't be removed
         :return: a list of filtered WordInstances
     """
-    # remove_duplicates and half_duplicates
-    s_wrds = sorted(tboxes, key=lambda x: len(x.word.text), reverse=True)
+    # removes loenley streets-suffix such as "st"
+    less_tboxes = [box for box in tboxes if
+                   not bool(re.match('^' + box_algo.ST_SUFFIX + '$', box.word.text, re.I))]
+
+    s_wrds = sorted(less_tboxes, key=lambda x: (len(x.word.text), x.word.text_score), reverse=True)
     extracted_words = []
     while len(s_wrds):
         comp = s_wrds[0]
