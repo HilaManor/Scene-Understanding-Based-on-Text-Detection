@@ -26,11 +26,14 @@ def search_geolocation(streets, others):
         location = geolocator.reverse(Point(lat, lng))
         print(location.address)
 
-        #open the map
-        apikey = 'AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0'
-        gmap = gmplot.GoogleMapPlotter(lat, lng, 14, apikey=apikey)
-        gmap.draw('map.html')
-        webbrowser.open('file://' + os.path.realpath(r'map.html'))
+def __disp_matches(results):
+    # geolocator = Nominatim(user_agent=API_KEY)
+    lats = [res['geometry']['location']['lat'] for res in results]
+    lngs = [res['geometry']['location']['lng'] for res in results]
+    for i in range(len(results)):
+        print("\t%d - %s at (%.5fN, %.5fE)" % (i + 1, results[i]["formatted_address"], lats[i], lngs[i]))
+    return lats, lngs
+
 
 def __create_suffixes_combinations(streets):
     combs = []
