@@ -82,10 +82,10 @@ def _can_be_same_sign(box_a, box_b, cont_right_line, cont_left_line, angle_diff=
     return cross_check  # False
 
 
-def analyze_extracted_words(tboxes, panorama):
+def analyze_extracted_words(tboxes, panorama, street_grade=85):
     __update_grades(tboxes)
-    less_tboxes = __remove_duplicates(tboxes, cut_off=90)
-    streets, others = __split_streets(less_tboxes)
+    less_tboxes = __remove_duplicates(tboxes, cut_off=85, street_grade=street_grade)
+    streets, others = __split_streets(less_tboxes, street_grade=street_grade)
     others = __filter_others(others, cutoff_score=0.92)
 
     return streets, others
@@ -94,7 +94,7 @@ def __update_grades(tboxes):
     for box in tboxes:
         box.update_grade()
 
-def __remove_duplicates(tboxes, cut_off=90):
+def __remove_duplicates(tboxes, cut_off=90, street_grade=90):
     """remove duplicated words that were found partially or fully, based on levinstein distance
 
         :param twords: a list of WordInstances to filter
@@ -116,11 +116,11 @@ def __remove_duplicates(tboxes, cut_off=90):
     return [word for word in extracted_words if len(word.word.text.split()) <= 3]
 
 
-def __split_streets(tboxes, cutoff_grade=75):
+def __split_streets(tboxes, street_grade=75):
     streets = []
     others = []
     for box in tboxes:
-        if box.grade >= cutoff_grade:
+        if box.grade >= street_grade:
             streets.append(box)
         else:
             others.append(box)
