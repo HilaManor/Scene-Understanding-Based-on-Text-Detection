@@ -27,6 +27,15 @@ def search_location(streets, others, output_path):
         find_results = gmaps.find_place(complete, 'textquery', fields=['geometry/location/lat', 'geometry/location/lng', 'formatted_address', 'name'])["candidates"]
         for res in find_results:
             guesses.append(res)  # will add duplicates, because that means intersection!
+
+    close_guesses = []
+    for pair in itertools.combinations(guesses, 2):
+        if __measure_dist(pair[0]["geometry"]["location"]["lat"],
+                          pair[0]["geometry"]["location"]["lng"],
+                          pair[1]["geometry"]["location"]["lat"],
+                          pair[1]["geometry"]["location"]["lng"]) < 50:
+            close_guesses.append(pair)
+
 def _search_geolocation(gmaps, output_path, streets):
     combinations_to_try = __create_suffixes_combinations(streets)
     results = []
