@@ -13,7 +13,17 @@ import numpy as np
 
 
 class CharNetRunner:
-    """Warper for charnet. Handles extracting words on windows from the panorama"""
+    """Warper for charnet. Handles extracting words on windows from the panorama
+
+    Public Functions:
+        get_absolute_window_words - extract words from a given window of the panorama
+        clean_duplicate_words - remove duplicated from words extracted in the same window
+        new_words_only - filter out words that have been extracted in previous windows
+
+    Variables:
+        config_file_path - path for the charnet config file
+        charnet - charnet instance
+    """
     def __init__(self, config_file):
         self.config_file_path = config_file
 
