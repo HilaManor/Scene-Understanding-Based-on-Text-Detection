@@ -32,6 +32,14 @@ def search_geolocation(streets, others):
         gmap.draw('map.html')
         webbrowser.open('file://' + os.path.realpath(r'map.html'))
 
+def __plot_point(lat, lng, output_path, result_name):
+    map = gmplot.GoogleMapPlotter(lat, lng, 16, title=result_name, apikey=API_KEY)
+    map.marker(lat, lng)
+    map_path = os.path.join(output_path, 'best_map - %s.html' % result_name)
+    map.draw(map_path)
+    webbrowser.open('file://' + os.path.realpath(map_path))
+
+
 def __measure_dist(lat1, lon1, lat2, lon2):
     """Haversine formula"""
     r = 6378.137  # Radius of earth in KM
