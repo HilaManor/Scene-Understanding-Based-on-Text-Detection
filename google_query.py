@@ -1,6 +1,7 @@
 import googlemaps
 import webbrowser
 from gmplot import *
+import numpy as np
 from geopy.geocoders import Nominatim
 from geopy.point import Point
 import os
@@ -31,3 +32,12 @@ def search_geolocation(streets, others):
         gmap.draw('map.html')
         webbrowser.open('file://' + os.path.realpath(r'map.html'))
 
+def __measure_dist(lat1, lon1, lat2, lon2):
+    """Haversine formula"""
+    r = 6378.137  # Radius of earth in KM
+    dLat = lat2 * np.pi / 180 - lat1 * np.pi / 180
+    dLon = lon2 * np.pi / 180 - lon1 * np.pi / 180
+    a = np.sin(dLat / 2) * np.sin(dLat / 2) + np.cos(lat1 * np.pi / 180) * np.cos(lat2 * np.pi / 180) * np.sin(dLon / 2) * np.sin(dLon / 2)
+    c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1 - a))
+    d = r * c
+    return d * 1000  # meters
