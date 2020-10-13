@@ -16,20 +16,23 @@ def convert_hsv_histogram(street_sign):
     saturation_img = hsv_img[:, :, 1]
     value_img = hsv_img[:, :, 2]
     plt.subplot(2, 2, 1)
-    title('Histogram of the Hue channel')
+    title('Hist of the Hue channel')
     hist(hue_img[mask], bins=bins, range=range)
     plt.subplot(2, 2, 2)
-    title('Histogram of the saturation channel')
+    title('Hist of the saturation channel')
     hist(saturation_img[mask], bins=bins, range=range)
     plt.subplot(2, 2, 3)
-    title('Histogram of the Value channel')
+    title('Hist of the Value channel')
     hist(value_img[mask], bins=bins, range=range)
     plt.subplot(2, 2, 4)
     imshow(rgb_img)
     title('RGB_img')
-    plt.savefig(os.path.join(r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\bhistsoutput",
+    plt.savefig(os.path.join(r"E:\Hila\Documents\Technion\Semester F\project-A\Data\FINALS\broadway_hists_out",
                              os.path.basename(street_sign)))
+    mng = plt.get_current_fig_manager()
+    mng.window.state('zoomed')
     plt.show()
+    
 
 
 if __name__ == '__main__':

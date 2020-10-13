@@ -6,9 +6,22 @@
 *.jpeg
 *.png
 *.zip
+*.html
+*extracted_words.txt
 research-charnet-master/datasets/*
 .idea/*
 *.pyc
+*.pickle
 /charnet/weights/*.pth
 /cmake*
 /opencv*
+/Adobe Premiere Pro *
+*.m4v
+*.mp4
+*.mkv
+*.f4v
+*.flv
+*.avi
+*.mp3
+*prproj
+*.wav

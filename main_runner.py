@@ -43,43 +43,49 @@ def parse_dir(scene_path, output_path, charnet, dont_reorder):
     :param output_path: All of the algorithm output will be thrown out in this path
     :return: None
     """
-    # panorama_gen = PanoramaMaker(descriptor_type=DescriptorType.SIFT, matcher_type=MatcherType.KNN)
-    # for im_name in sorted(os.listdir(scene_path)):
-    #     print("[+] Working on \"%s\"..." % im_name)
-    #     im_file = os.path.join(scene_path, im_name)
-    #     im_original = cv2.imread(im_file)
-    #     panorama_gen.add_photo(im_original)
-    #
-    # panorama = panorama_gen.create_panorama(dont_reorder)
+    panorama_gen = PanoramaMaker(descriptor_type=DescriptorType.SIFT, matcher_type=MatcherType.KNN)
+    for im_name in sorted(os.listdir(scene_path)):
+        print("[+] Working on \"%s\"..." % im_name)
+        im_file = os.path.join(scene_path, im_name)
+        im_original = cv2.imread(im_file)
+        panorama_gen.add_photo(im_original)
 
-    #cv2.imwrite('Data\\FINALS\\philly_panorama_final.png', panorama)
-    # panorama = cv2.imread(r"Data\FINALS\philly_panorama_final.png")
-    panorama = cv2.imread(r"Data\FINALS\broadway_panorama_final1.png")
+    panorama = panorama_gen.create_panorama(dont_reorder)
 
-    # windows = ImageWindows(panorama, input_size_cfg=2280)
-    # twords = []
-    # for idx, window in enumerate(windows, 1):
-    #     print("[-] Splitting to windows: %d/%d" % (idx, len(windows)), end='\r')
-    #     word_instances = charnet.get_absolute_window_words(windows, window)
-    #     word_instances = charnet.clean_duplicate_words(word_instances)
-    #     new_words_only = CharNetRunner.new_words_only(twords, word_instances)
-    #     if new_words_only:
-    #         twords += new_words_only
-    # # print('\n[+] Done Extracting Text')
-    # # vis_image = vis(panorama, twords)
-    # # print('\r[+] Printed detecions')
+    cv2.imwrite(os.path.join(output_path, 'panorama.png'), panorama)
+    # panorama = cv2.imread(os.path.join(output_path, 'panorama.png'))
 
-    with open("words.pickle", 'rb') as f:
+    windows = ImageWindows(panorama, input_size_cfg=1520)
+    twords = []
+    for idx, window in enumerate(windows, 1):
+        print("[-] Splitting to windows: %d/%d" % (idx, len(windows)), end='\r')
+        word_instances = charnet.get_absolute_window_words(windows, window)
+        word_instances = charnet.clean_duplicate_words(word_instances)
+        new_words_only = CharNetRunner.new_words_only(twords, word_instances)
+        if new_words_only:
+            twords += new_words_only
+    print('\n[+] Done Extracting Text')
+    vis_image = vis(panorama, twords)
+    cv2.imwrite(os.path.join(output_path, 'all_text.png'), vis_image)
+
+    with open(os.path.join(output_path, "words.pickle"), 'wb') as f:
         import pickle
-        # pickle.dump(twords, f)
-        twords = pickle.load(f)
+        pickle.dump(twords, f)
+        # twords = pickle.load(f)
 
     tboxes = box_algo.expand_word_data(twords, panorama)
     c_tboxes = text_algo.concat_words(tboxes, panorama)
     combined_vis_image = vis(panorama, c_tboxes)
+    cv2.imwrite(os.path.join(output_path, 'combined_words.png'), combined_vis_image)
 
     streets, others = text_algo.analyze_extracted_words(c_tboxes, panorama)
-    loc = google_query.search_geolocation(streets, others)
+    with open(os.path.join(output_path, "extracted_words.txt"), 'w') as f:
+        f.write("streets:")
+        f.writelines(['\n\t' + s.word.text for s in streets])
+        f.write("\nothers:")
+        f.writelines(['\n\t' + s.word.text for s in others])
+        f.write('\n')
+    loc = google_query.search_location(streets, others, output_path)
     return twords, panorama
 
 
