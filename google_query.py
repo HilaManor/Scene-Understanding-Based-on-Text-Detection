@@ -20,6 +20,13 @@ def search_location(streets, others, output_path):
     else:
         print("[X] No geo-data was found!")
 
+    print("[+] Guessing Area...")
+    guesses = []
+    for o in others:
+        complete = o.word.text + ', ' + ' & '.join([s.word.text for s in streets])
+        find_results = gmaps.find_place(complete, 'textquery', fields=['geometry/location/lat', 'geometry/location/lng', 'formatted_address', 'name'])["candidates"]
+        for res in find_results:
+            guesses.append(res)  # will add duplicates, because that means intersection!
 def _search_geolocation(gmaps, output_path, streets):
     combinations_to_try = __create_suffixes_combinations(streets)
     results = []
