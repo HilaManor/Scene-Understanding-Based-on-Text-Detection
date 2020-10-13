@@ -95,7 +95,7 @@ def parse_dir(scene_path, output_path, char_net, dont_reorder):
     combined_vis_image = vis(panorama, c_tboxes)
     cv2.imwrite(os.path.join(output_path, 'combined_words.png'), combined_vis_image)
 
-    streets, others = text_algo.analyze_extracted_words(c_tboxes, panorama)
+    streets, others = text_algo.analyze_extracted_words(c_tboxes)
     with open(os.path.join(output_path, "extracted_words.txt"), 'w') as f:
         f.write("streets:")
         f.writelines(['\n\t' + s.word.text for s in streets])
