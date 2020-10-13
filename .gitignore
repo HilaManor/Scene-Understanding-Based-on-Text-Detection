@@ -25,3 +25,4 @@ research-charnet-master/datasets/*
 *.mp3
 *prproj
 *.wav
+/Data/names/*
