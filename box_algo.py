@@ -51,12 +51,13 @@ class _ColorStats:
         self.hist = hist
 
         hue_hist, bins = np.histogram(hues, bins=int(np.round(np.sqrt(len(hues)))))
-        peaks, props = find_peaks(hue_hist, prominence=1)
+        hue_hist_padded = np.hstack([hue_hist[1],hue_hist,hue_hist[-2]])
+        peaks, props = find_peaks(hue_hist_padded, prominence=1)
         if len(peaks) > 3:  # todo: check
             new_promin = (np.max(props["prominences"]) - np.min(props["prominences"])) / 2
             # new_promin = np.average(props["prominences"])
-            peaks, props = find_peaks(hue_hist, prominence=new_promin)
-        peaks_locs = [np.average([bins[bin_i+1],bins[bin_i]]) for bin_i in peaks]
+            peaks, props = find_peaks(hue_hist_padded, prominence=new_promin)
+        peaks_locs = [np.average([bins[bin_i+1 -1],bins[bin_i -1]]) for bin_i in peaks]
         dists_from_peaks = [abs(peak-hue_mean) for peak in peaks_locs]
         self.goodness_of_gauss_fit = {"peaks_count" : len(peaks),
                                       "dist_from_nearest": np.min(dists_from_peaks)
