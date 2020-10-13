@@ -32,6 +32,16 @@ def search_geolocation(streets, others):
         gmap.draw('map.html')
         webbrowser.open('file://' + os.path.realpath(r'map.html'))
 
+def __create_suffixes_combinations(streets):
+    combs = []
+    for s in streets:
+        if s.key_street_word:
+            combs.append([s.word.text])
+        else:
+            combs.append([' '.join([*comb]) for comb in itertools.product([s.word.text], suffixes)])
+    return [' & '.join([*comb]) for comb in itertools.product(*combs)]
+
+
 def __plot_point(lat, lng, output_path, result_name):
     map = gmplot.GoogleMapPlotter(lat, lng, 16, title=result_name, apikey=API_KEY)
     map.marker(lat, lng)
