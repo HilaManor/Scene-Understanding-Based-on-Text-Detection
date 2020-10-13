@@ -120,6 +120,12 @@ def __remove_duplicates(tboxes, cut_off=90, street_grade=90):
     return [word for word in extracted_words if len(word.word.text.split()) <= 3]
 
 
+def __same_street_sign_exists(box, base_boxes, street_grade=90):
+    for b in base_boxes:
+        if b.grade >= street_grade and bool(re.match(box.word.text+'(\\s)?(?(1)'+box_algo.ST_SUFFIX+'|$)', b.word.text, re.I)):
+            return True
+    return False
+
 def __split_streets(tboxes, street_grade=75):
     streets = []
     others = []
