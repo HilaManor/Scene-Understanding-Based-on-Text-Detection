@@ -117,5 +117,5 @@ A video showcasing a run that used intersecting locations (close places) to find
 
 ## Sources
 - [CharNet](https://github.com/MalongTech/research-charnet)
-  - Xing, Linjie and Tian, Zhi and Huang, Weilin and Scott, Matthew R, “Convolutional Character Networks”, Proceedings of the IEEE International Conference on Computer Vision (ICCV), 2019
+  - Xing, Linjie and Tian, Zhi and Huang, Weilin and Scott, Matthew R, [“Convolutional Character Networks”](https://arxiv.org/abs/1910.07954), Proceedings of the IEEE International Conference on Computer Vision (ICCV), 2019
 - Heung-Yeung Shum and R. Szeliski, Microsoft Research, [“Construction of Panoramic Image Mosaics with Global and Local Alignment”](https://ieeexplore.ieee.org/document/710831), Sixth International Conference on Computer Vision and IJCV, 1999
