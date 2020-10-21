@@ -10,6 +10,7 @@ This code was created by undergrads as part of a half-year long project, with th
 ## Table of Contents
 * [Requirements](#requirements)
 * [Usage Example](#usage-example)
+* [Sources](#sources)
 
 ## Requirements
 The project uses [CharNet](https://github.com/MalongTech/research-charnet) for the text detection. 
@@ -35,14 +36,28 @@ pip install torch===1.4.0 torchvision===0.5.0 -f https://download.pytorch.org/wh
 ```
 
 ## Usage Example
+To check a signle scene use:
+```bash
+--single_scene ".\scene" --results_dir ".\output"
+```
+`scene` should be a folder with a set of photos.
 
+for checking multiple scenes at once, order the images in seperate folders and input the parent folder. e.g.:
+```bash 
+├── Parent
+│   ├── scene 1
+│   ├── scene 2
+│   ├── scene 3
+```
+and then use:
+```bash
+--scenes_dir ".\Parent" --results_dir ".\output"
+```
+
+* If you know the photos are ordered by name, you can add the option `--dont_reorder` to vastly improve runtime.
+* if `--results_dir` isn't given, the output will be generated in the input directory.
 
 ## Sources
-
-@inproceedings{xing2019charnet,
-title={Convolutional Character Networks},
-author={Xing, Linjie and Tian, Zhi and Huang, Weilin and Scott, Matthew R},
-booktitle={Proceedings of the IEEE International Conference on Computer Vision (ICCV)},
-year={2019}
-}
-
+- [CharNet](https://github.com/MalongTech/research-charnet)
+  - Xing, Linjie and Tian, Zhi and Huang, Weilin and Scott, Matthew R, “Convolutional Character Networks”, Proceedings of the IEEE International Conference on Computer Vision (ICCV), 2019
+- Heung-Yeung Shum and R. Szeliski, Microsoft Research, [“Construction of Panoramic Image Mosaics with Global and Local Alignment”](https://ieeexplore.ieee.org/document/710831), Sixth International Conference on Computer Vision and IJCV, 1999
