@@ -67,8 +67,8 @@ and then use:
 * if `--results_dir` isn't given, the output will be generated in the input directory.
 
 ## Team
-Hila Manor
-Adir Krayden
+Hila Manor and Adir Krayden 
+
 Supervised and guided by Elad Hirsch
 
 ## Videos
