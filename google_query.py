@@ -10,7 +10,7 @@ import os
 import itertools
 
 # ~~~~~~~~~~~~~~~~~~~~~~~~ Constants ~~~~~~~~~~~~~~~~~~~~~~~
-API_KEY = 'AIzaSyD_4bjN2dduegN3qaO6EcljP1NTiG_akj0'
+API_KEY = API KEY
 suffixes = ['st', 'ave', 'bvd']
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~ Code ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
